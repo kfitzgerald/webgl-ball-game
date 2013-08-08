@@ -596,11 +596,13 @@ function createScene( ) {
     scene.add( terrain );
 
 
-    //terrain2 = createRandomPlane(terrainSize, terrainSize, new THREE.MeshLambertMaterial /*THREE.MeshPhongMaterial*/( { color: 0xFAD55C, shading: THREE.FlatShading } ), .75, 10);
-    //scene.add( terrain2 );
+    terrain2 = createRandomPlane(terrainSize, terrainSize, new THREE.MeshLambertMaterial /*THREE.MeshPhongMaterial*/( { color: 0xFAD55C, shading: THREE.FlatShading } ), .75, 35);
+    //terrain2.position.z = -10
+    scene.add( terrain2 );
 
-    //terrain3 = createRandomPlane(terrainSize, terrainSize, new THREE.MeshLambertMaterial /*THREE.MeshPhongMaterial*/( { color: 0x6E3518, shading: THREE.FlatShading } ), .55, 10);
-    //scene.add( terrain3 );
+    terrain3 = createRandomPlane(terrainSize, terrainSize, new THREE.MeshLambertMaterial /*THREE.MeshPhongMaterial*/( { color: 0x6E3518, shading: THREE.FlatShading } ), .55, 40);
+    scene.add( terrain3 );
+    //terrain2.position.z = -30
 
     //planes = [ water, terrain, terrain2, terrain3 ];
     planes = [ water, terrain];
@@ -678,6 +680,8 @@ function createScene( ) {
 
         camera.lookAt(gameCameraTarget);
         animate();
+
+        lockPlayerZ();
     } );
 
 
@@ -737,7 +741,7 @@ function addTree(x, y, z) {
     if (z == null) {
         var c = intersectGroundObjs(x, y);
         //console.log(x,y,z);
-        if (c.length > 0 && c[0].object == terrain) {
+        if (c.length > 0 && c[0].object != water) {
             var tree = new THREE.Mesh( treeGeo, treeMats );
             tree.castShadow = true;
             tree.position = new THREE.Vector3(x, y, c[0].point.z);
@@ -840,7 +844,7 @@ function intersectGroundObjs(x, y) {
 
     //r.set(origin.clone(), direction.clone());
 
-    var c = r.intersectObjects([ terrain, water ], true);
+    var c = r.intersectObjects([ terrain, water, terrain2, terrain3 ], true);
 
 
     //console.log('colls', c);
@@ -984,7 +988,7 @@ function onMouseUp(event) {
     projector.unprojectVector(vector, camera);
     var raycaster = new THREE.Raycaster(camera.position, vector.sub(camera.position).normalize());
 
-    var intersects = raycaster.intersectObjects([ terrain ], true);
+    var intersects = raycaster.intersectObjects([ terrain, terrain2, terrain3 ], true);
 
     if (intersects.length > 0) {
         addTree(intersects[0].point.x, intersects[0].point.y, intersects[0].point.z);
