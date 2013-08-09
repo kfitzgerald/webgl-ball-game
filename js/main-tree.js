@@ -364,7 +364,7 @@ function init() {
     // SCENE CAMERA
 
     camera = new THREE.PerspectiveCamera( 45, SCREEN_WIDTH / SCREEN_HEIGHT, NEAR, FAR );
-    gameCameraTarget = new THREE.Vector3(0,0,0);
+    //gameCameraTarget = new THREE.Vector3(0,0,0);
 
     projector = new THREE.Projector();
 
@@ -386,10 +386,12 @@ function init() {
 
 
     camera.position.set(0, 8, 16);
-    camera.lookAt(gameCameraTarget);
-    camera.up.y = -1;
-    cameraPlaceholderHelper = new THREE.CameraHelper( camera );
-    scene.add( cameraPlaceholderHelper );
+    //camera.lookAt(gameCameraTarget);
+    camera.lookAt(scene.position);
+    camera.up.y = 0;
+    camera.up.z = 1;
+    //cameraPlaceholderHelper = new THREE.CameraHelper( camera );
+    //scene.add( cameraPlaceholderHelper );
 
 	//camera.position.set( -120.99318691416968, -37.
 	// 705309121503035, 55.23685574177473 );
@@ -473,7 +475,7 @@ function init() {
     light2.position.set(0, 0, 10 );
     moon.position.set(0, 0, 10 );
     moon.lookAt(0, 0, 0);
-    lightRig.rotation.setX(0.6807); // middle of northern hemisphere ~39deg N latitude
+    lightRig.rotation.x = 0.6807; // middle of northern hemisphere ~39deg N latitude
     
     createScene();
 
@@ -501,7 +503,7 @@ function init() {
     
     
     // TESTING CONTROLS
-    controls = new THREE.TrackballControls(camera, renderer.domElement );
+    //controls = new THREE.TrackballControls(camera, renderer.domElement );
     
 
 }
@@ -517,7 +519,9 @@ function onWindowResize() {
 
     renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
 
-    controls.handleResize();
+    if (!chaseCamEnabled) {
+        controls.handleResize();
+    }
 
 }
 
@@ -566,10 +570,14 @@ function createScene( ) {
         planeMaterial = new THREE.MeshPhongMaterial( { map: texture } );
     }
 
+    //var axisGeo= new THREE.PlaneGeometry(terrainSize + 10, terrainSize + 10, 1, 1);
+    //window.axis = new THREE.Mesh(axisGeo, new THREE.MeshLambertMaterial( { color: 0x993333, shading: THREE.FlatShading, transparent: true, opacity: 0.5 } ));
+    //scene.add(window.axis);
+
     //var geometry = new THREE.PlaneGeometry( 64 * 2, 64 * 2 );
     //var water = new THREE.Mesh( geometry, planeMaterial );
 
-    water = createRandomPlane(terrainSize, terrainSize, planeMaterial, .1, 3);
+    water = createRandomPlane(terrainSize, terrainSize, planeMaterial, .1, 4);
 
 
     //water.position.set( 0, 0, 0 );
@@ -591,7 +599,7 @@ function createScene( ) {
 //    geo.computeFaceNormals();
 //    terrain = new THREE.Mesh(geo, new THREE.MeshLambertMaterial /*THREE.MeshPhongMaterial*/( { color: 0x557733, shading: THREE.FlatShading }));
 
-    terrain = createRandomPlane(terrainSize, terrainSize, new THREE.MeshLambertMaterial /*THREE.MeshPhongMaterial*/( { color: 0x557733, shading: THREE.FlatShading } ), .25, 5);
+    terrain = createRandomPlane(terrainSize, terrainSize, new THREE.MeshLambertMaterial /*THREE.MeshPhongMaterial*/( { color: 0x557733, shading: THREE.FlatShading } ), .25, 6);
 
     scene.add( terrain );
 
@@ -600,8 +608,8 @@ function createScene( ) {
     //terrain2.position.z = -10
     scene.add( terrain2 );
 
-    terrain3 = createRandomPlane(terrainSize, terrainSize, new THREE.MeshLambertMaterial /*THREE.MeshPhongMaterial*/( { color: 0x6E3518, shading: THREE.FlatShading } ), .55, 40);
-    scene.add( terrain3 );
+    //terrain3 = createRandomPlane(terrainSize, terrainSize, new THREE.MeshLambertMaterial /*THREE.MeshPhongMaterial*/( { color: 0x6E3518, shading: THREE.FlatShading } ), .55, 40);
+    //scene.add( terrain3 );
     //terrain2.position.z = -30
 
     //planes = [ water, terrain, terrain2, terrain3 ];
@@ -612,19 +620,19 @@ function createScene( ) {
     //
 
     var cubeMaterials = [];
-    for (var i=0; i<6; i++) {
-        var img = new Image();
-        img.src = 'img/world-grid'+ i + '.png'; // 0=right, 1=left, 2=top, 3=bottom, 4=front, 5=back
-        
-        var tex = new THREE.Texture(img, THREE.UVMapping(), THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping, THREE.NearestFilter, THREE.NearestFilter);
-
-        img.tex = tex;
-        img.onload = function() {
-            this.tex.needsUpdate = true;
-        };
-        var mat = new THREE.MeshPhongMaterial({color: 0xffffff, map: tex});
-        cubeMaterials.push(mat);
-    }
+//    for (var i=0; i<6; i++) {
+//        var img = new Image();
+//        img.src = 'img/world-grid'+ i + '.png'; // 0=right, 1=left, 2=top, 3=bottom, 4=front, 5=back
+//
+//        var tex = new THREE.Texture(img, THREE.UVMapping(), THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping, THREE.NearestFilter, THREE.NearestFilter);
+//
+//        img.tex = tex;
+//        img.onload = function() {
+//            this.tex.needsUpdate = true;
+//        };
+//        var mat = new THREE.MeshPhongMaterial({color: 0xffffff, map: tex});
+//        cubeMaterials.push(mat);
+//    }
     
     if (FLATSHADING) {
         cubeMaterials = new THREE.MeshPhongMaterial( {
@@ -636,14 +644,14 @@ function createScene( ) {
     } 
     
     var cubeGeo = new THREE.CubeGeometry( 1, 1, 2, 1, 1, 1 );
-    cube = new THREE.Mesh( cubeGeo, cubeMaterials);
-    cube.castShadow = true;
-    cube.receiveShadow = true;
+    player = new THREE.Mesh( cubeGeo, cubeMaterials);
+    player.castShadow = true;
+    player.receiveShadow = true;
 
-    scene.add( cube );
+    scene.add( player );
 
 
-    player = cube;
+    //player = cube;
 
 //    setTimeout(function() {
 //        camera.lookAt(gameCameraTarget);
@@ -678,7 +686,7 @@ function createScene( ) {
         // Add a shit load of trees
         for(var i = 0; i < 50; i++) { addTree(Math.random() * 256 - 128, Math.random() * 256 - 128); }
 
-        camera.lookAt(gameCameraTarget);
+        //camera.lookAt(gameCameraTarget);
         animate();
 
         lockPlayerZ();
@@ -793,10 +801,8 @@ function lockPlayerZ() {
     var z = intersectGround(player.position.x, player.position.y);
     if (z != null) {
         var diff = z - player.position.z;
-        player.position.z += diff;
-        camera.position.z += diff;
-        gameCameraTarget.z += diff;
-        //console.log(r, c, zMax);
+        //player.position.z += diff;
+        player.translateZ(diff);
     }
 }
 
@@ -844,12 +850,54 @@ function intersectGroundObjs(x, y) {
 
     //r.set(origin.clone(), direction.clone());
 
-    var c = r.intersectObjects([ terrain, water, terrain2, terrain3 ], true);
+    var c = r.intersectObjects([ terrain, water, terrain2 ], true);
 
 
     //console.log('colls', c);
 
     return c;
+}
+
+var chaseCamEnabled = true;
+var chaseScale = 1;
+var toggleWatchers = {};
+
+function isWaitRequired(key) {
+    if (toggleWatchers[key] != null) {
+        return toggleWatchers[key];
+    } else {
+        return false;
+    }
+}
+
+function waitRequired(key, timeout) {
+    toggleWatchers[key] = true;
+    if (timeout != null && timeout > 0) {
+        setTimeout(function() { toggleWatchers[key] = false; }, timeout);
+    }
+}
+
+function updateChaseCamLocation() {
+    if (chaseCamEnabled) {
+        var relativeCameraOffset = new THREE.Vector3(0, 3 * chaseScale, 1 * chaseScale);
+        var cameraOffset = relativeCameraOffset.applyMatrix4(player.matrixWorld);
+        camera.position.x = cameraOffset.x;
+        camera.position.y = cameraOffset.y;
+        camera.position.z = cameraOffset.z;
+
+        // Test for ground collision
+        var minZ = intersectGround(camera.position.x, camera.position.y);
+        if (camera.position.z < minZ + 1) {
+            //console.log('bounce camera', camera.position.z, minZ + 1);
+            camera.position.z = minZ + 1;
+
+        }
+
+
+        var target = player.position.clone();
+        camera.lookAt(target);
+        //console.log(camera.rotation);
+    }
 }
 
 function animate() {
@@ -858,61 +906,72 @@ function animate() {
 
     render();
     stats.update();
+
+    updateChaseCamLocation();
+
+    var playerMoved = false,
+        playerSpeed = 0.05,
+        playerAngleSpeed = Math.PI / 2 * playerSpeed;
     
     if (isKeyDown(KEYCODE.W)) { 
-        //cube.position.y -= 0.10;
-        player.position.y -= 0.10;
-        camera.position.y -= 0.10;
-        gameCameraTarget.y -= 0.10;
+        //player.position.y -= 0.10;
+        player.translateY(-playerSpeed);
         lockPlayerZ();
+        playerMoved = true;
     }
     
     if (isKeyDown(KEYCODE.S)) { 
-        //cube.position.y += 0.10;
-        player.position.y += 0.10;
-        camera.position.y += 0.10;
-        gameCameraTarget.y += 0.10;
+        //player.position.y += 0.10;
+        player.translateY(playerSpeed);
         lockPlayerZ();
+        playerMoved = true;
     }
     
     if (isKeyDown(KEYCODE.A)) { 
-        //cube.position.x += 0.10;
-        player.position.x += 0.10;
-        camera.position.x += 0.10;
-        gameCameraTarget.x += 0.10;
+//        player.position.x += 0.10;
+        player.translateX(playerSpeed);
         lockPlayerZ();
+        playerMoved = true;
     }
     
     if (isKeyDown(KEYCODE.D)) { 
-        //cube.position.x -= 0.10;
-        player.position.x -= 0.10;
-        camera.position.x -= 0.10;
-        gameCameraTarget.x -= 0.10;
+        //player.position.x -= 0.10;
+
+        player.translateX(-playerSpeed);
         lockPlayerZ();
+        playerMoved = true;
     }
 
 	if (isKeyDown(KEYCODE.UP_ARROW)) {
-        player.position.z += 0.10;
-        camera.position.z += 0.10;
-        gameCameraTarget.z += 0.10;
+        //player.position.z += 0.10;
+        //player.translateZ(playerSpeed);
+        //playerMoved = true;
 	}
 
 	if (isKeyDown(KEYCODE.DOWN_ARROW)) {
-        player.position.z -= 0.10;
-        camera.position.z -= 0.10;
-        gameCameraTarget.z -= 0.10;
+        //player.position.z -= 0.10;
+        //player.translateZ(-playerSpeed);
+        //playerMoved = true;
 	}
 
+    var rotation_matrix = new THREE.Matrix4().identity();
 	if (isKeyDown(KEYCODE.LEFT_ARROW)) {
-        player.rotation.x -= Math.PI / 20;
+        //player.rotation.x -= Math.PI / 20;
+        player.rotateOnAxis( new THREE.Vector3(0,0,1), playerAngleSpeed);
+        //playerMoved = true;
 	}
 
     if (isKeyDown(KEYCODE.RIGHT_ARROW)) {
-        player.rotation.x += Math.PI / 20;
+        //player.rotation.x += Math.PI / 20;
+        player.rotateOnAxis( new THREE.Vector3(0,0,1), -playerAngleSpeed);
+        //playerMoved = true;
     }
 
     if (isKeyDown(KEYCODE.SPACE)) {
-        pauseRotation = !pauseRotation;
+        if (!isWaitRequired(KEYCODE.SPACE)) {
+            waitRequired(KEYCODE.SPACE);
+            pauseRotation = !pauseRotation;
+        }
     }
 
     if (isKeyDown(KEYCODE.SHIFT) && isKeyDown(KEYCODE.SPACE)) {
@@ -920,16 +979,54 @@ function animate() {
     }
 
     if (isKeyDown(KEYCODE.P)) {
-        cameraPlaceholderHelper.visible = !cameraPlaceholderHelper.visible;
+        //cameraPlaceholderHelper.visible = !cameraPlaceholderHelper.visible;
         light.shadowCameraVisible = !light.shadowCameraVisible;
     }
+
+    if (isKeyDown(KEYCODE.ENTER)) {
+        if (!isWaitRequired(KEYCODE.ENTER)) {
+            waitRequired(KEYCODE.ENTER);
+            chaseCamEnabled = !chaseCamEnabled;
+            if (!chaseCamEnabled) {
+                if (controls == null) {
+                    controls = new THREE.TrackballControls(camera, renderer.domElement );
+                    controls.handleResize();
+                } else {
+                    controls.enabled = true;
+                }
+            } else {
+                if (controls != null) {
+                    controls.enabled = false;
+                }
+                camera.up.x = 0;
+                camera.up.y = 0;
+                camera.up.z = 1;
+            }
+        }
+    }
+
+    if (isKeyDown(KEYCODE.L)) {
+        if (!isWaitRequired(KEYCODE.L)) {
+            var lineMat = new THREE.LineBasicMaterial({ color: 0x0000ff }),
+                lineGeo = new THREE.Geometry();
+
+            lineGeo.vertices.push(player.position);
+            //player.l
+            lineGeo.vertices.push(new THREE.Vector3(player.position.x, player.position.y, player.position.z));
+            var line = new THREE.Line(lineGeo, lineMat);
+            //console.log(upperZ, lowerZ, origin, direction);
+            scene.add(line);
+        }
+    }
+
     
     //light.target.position.copy(cameraPlaceholder.position);  // target the light at the camera
     //light.position.copy(cameraPlaceholder.position).addSelf(light.sunLightPos); // position the light at the camera + offset
 
 
-    
-    controls.update();
+    if (!chaseCamEnabled) {
+        controls.update();
+    }
 
     if (!pauseRotation) {
         light.updateMatrixWorld();
@@ -956,19 +1053,29 @@ function onKeyDown(event) {
     
 function onKeyUp(event) {
     keys[event.keyCode] = false;
-
+    if (toggleWatchers[event.keyCode] != null) {
+        toggleWatchers[event.keyCode] = false;
+    }
 }
  
  //scroll input handling
 function onMouseScroll(event, delta, deltaX, deltaY) {
     if (deltaY > 0) {
         //scroll up 
-        console.log("scrollup");
-        camera.position.multiplyScalar(1.1);
+        //console.log("scrollup");
+        if (!chaseCamEnabled) {
+            camera.position.multiplyScalar(1.1);
+        } else {
+            chaseScale = Math.max(0.5, chaseScale - 0.1);
+        }
     } else if (deltaY < 0) {
-       //scroll down
-       console.log("scrolldown");
-       camera.position.multiplyScalar(0.9);
+        //scroll down
+        //console.log("scrolldown");
+        if (!chaseCamEnabled) {
+            camera.position.multiplyScalar(0.9);
+        } else {
+            chaseScale = Math.min(5, chaseScale + 0.1);
+        }
     }
     
     event.stopPropagation();
@@ -988,7 +1095,7 @@ function onMouseUp(event) {
     projector.unprojectVector(vector, camera);
     var raycaster = new THREE.Raycaster(camera.position, vector.sub(camera.position).normalize());
 
-    var intersects = raycaster.intersectObjects([ terrain, terrain2, terrain3 ], true);
+    var intersects = raycaster.intersectObjects([ terrain, terrain2 ], true);
 
     if (intersects.length > 0) {
         addTree(intersects[0].point.x, intersects[0].point.y, intersects[0].point.z);
