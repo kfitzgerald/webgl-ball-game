@@ -206,7 +206,7 @@ var SCREEN_WIDTH = window.innerWidth;
 var SCREEN_HEIGHT = window.innerHeight;
 
 
-var camera, controls, scene, renderer, cameraPlaceholder, cameraPlaceholderHelper, gameCameraTarget, planes, projector;
+var camera, plControls, controls, scene, renderer, cameraPlaceholder, cameraPlaceholderHelper, gameCameraTarget, planes, projector;
 var horse, castle, player, tree;
 var container, stats;
 
@@ -336,12 +336,107 @@ var KEYCODE = {
  }; //keycode enum
 var keys = []; // array for storing which keys are up/down
 
+var blocker = document.getElementById( 'blocker' );
+var instructions = document.getElementById( 'instructions' );
+var havePointerLock = 'pointerLockElement' in document || 'mozPointerLockElement' in document || 'webkitPointerLockElement' in document;
+var hasLock = false;
+
+if ( havePointerLock ) {
+    var element = document.body;
+
+    var pointerlockchange = function ( event ) {
+
+        if ( document.pointerLockElement === element || document.mozPointerLockElement === element || document.webkitPointerLockElement === element ) {
+
+            //controls.enabled = true;
+            hasLock = true;
+            clock.start();
+
+            blocker.style.display = 'none';
+
+        } else {
+
+            //controls.enabled = false;
+            hasLock = false;
+            clock.stop();
+
+            blocker.style.display = '-webkit-box';
+            blocker.style.display = '-moz-box';
+            blocker.style.display = 'box';
+
+            instructions.style.display = '';
+
+        }
+
+    };
+
+    var pointerlockerror = function ( event ) {
+
+        instructions.style.display = '';
+
+    };
+
+    // Hook pointer lock state change events
+    document.addEventListener( 'pointerlockchange', pointerlockchange, false );
+    document.addEventListener( 'mozpointerlockchange', pointerlockchange, false );
+    document.addEventListener( 'webkitpointerlockchange', pointerlockchange, false );
+
+    document.addEventListener( 'pointerlockerror', pointerlockerror, false );
+    document.addEventListener( 'mozpointerlockerror', pointerlockerror, false );
+    document.addEventListener( 'webkitpointerlockerror', pointerlockerror, false );
+
+    instructions.addEventListener( 'click', function ( event ) {
+
+        instructions.style.display = 'none';
+
+        // Ask the browser to lock the pointer
+        element.requestPointerLock = element.requestPointerLock || element.mozRequestPointerLock || element.webkitRequestPointerLock;
+
+        if ( /Firefox/i.test( navigator.userAgent ) ) {
+
+            var fullscreenchange = function ( event ) {
+
+                if ( document.fullscreenElement === element || document.mozFullscreenElement === element || document.mozFullScreenElement === element ) {
+
+                    document.removeEventListener( 'fullscreenchange', fullscreenchange );
+                    document.removeEventListener( 'mozfullscreenchange', fullscreenchange );
+
+                    element.requestPointerLock();
+                }
+
+            };
+
+            document.addEventListener( 'fullscreenchange', fullscreenchange, false );
+            document.addEventListener( 'mozfullscreenchange', fullscreenchange, false );
+
+            element.requestFullscreen = element.requestFullscreen || element.mozRequestFullscreen || element.mozRequestFullScreen || element.webkitRequestFullscreen;
+
+            element.requestFullscreen();
+
+        } else {
+
+            element.requestPointerLock();
+
+        }
+
+    }, false );
+
+} else {
+
+    instructions.innerHTML = 'Your browser doesn\'t seem to support Pointer Lock API';
+
+
+}
+
 init();
+
 
 function init() {
 
     container = document.createElement( 'div' );
     document.body.appendChild( container );
+
+
 
  
     // EVENTS
@@ -351,8 +446,14 @@ function init() {
     window.addEventListener( 'resize', onWindowResize, false );
     window.addEventListener( 'keydown', onKeyDown, false );
     window.addEventListener( 'keyup', onKeyUp, false );
+
+    //document.addEventListener( 'mousewheel', onMouseScroll, false );
+    document.addEventListener( 'mouseup', onMouseUp, false );
+    document.addEventListener( 'mousemove', onMouseMove, false );
+
     $('body').mousewheel( onMouseScroll ) ;
-    $('body').mouseup( onMouseUp ) ;
+//    $('body').mouseup( onMouseUp ) ;
+//    $('body').mousemove( onMouseMove );
     
     // SCENE
 
@@ -365,6 +466,9 @@ function init() {
 
     camera = new THREE.PerspectiveCamera( 45, SCREEN_WIDTH / SCREEN_HEIGHT, NEAR, FAR );
     //gameCameraTarget = new THREE.Vector3(0,0,0);
+
+    //plControls = new THREE.PointerLockControls(camera);
+    //scene.add(plControls.getObject());
 
     projector = new THREE.Projector();
 
@@ -859,7 +963,7 @@ function intersectGroundObjs(x, y) {
 }
 
 var chaseCamEnabled = true;
-var chaseScale = 1;
+var chaseScale = 2.5;
 var toggleWatchers = {};
 
 function isWaitRequired(key) {
@@ -900,6 +1004,9 @@ function updateChaseCamLocation() {
     }
 }
 
+
+var speed = 0.1, angleSpeed = 0.1;
+
 function animate() {
 
     requestAnimationFrame( animate );
@@ -907,11 +1014,15 @@ function animate() {
     render();
     stats.update();
 
+    if (!hasLock) {
+        return;
+    }
+
     updateChaseCamLocation();
 
     var playerMoved = false,
-        playerSpeed = 0.05,
-        playerAngleSpeed = Math.PI / 2 * playerSpeed;
+        playerSpeed = speed,
+        playerAngleSpeed = Math.PI / 2 * angleSpeed;
     
     if (isKeyDown(KEYCODE.W)) { 
         //player.position.y -= 0.10;
@@ -1031,6 +1142,8 @@ function animate() {
     if (!pauseRotation) {
         light.updateMatrixWorld();
         light.target.updateMatrixWorld();
+        light2.updateMatrixWorld();
+        light2.target.updateMatrixWorld();
 
         lightRig.rotation.y -= .001; // time of day
         light.intensity = Math.abs(lightRig.rotation.y / Math.PI % 2) < 1 ? Math.min(1.3, Math.sin(Math.abs(lightRig.rotation.y / Math.PI % 2) * Math.PI)*2) : 0
@@ -1048,18 +1161,87 @@ function render() {
 }
 
 function onKeyDown(event) {
+
+    if (!hasLock) {
+        return;
+    }
+
     keys[event.keyCode] = true;   
 }
     
 function onKeyUp(event) {
+
+    if (!hasLock) {
+        return;
+    }
+
     keys[event.keyCode] = false;
     if (toggleWatchers[event.keyCode] != null) {
         toggleWatchers[event.keyCode] = false;
     }
 }
+
+var mouse = {
+    x: null,
+    y: null,
+    lastX: null,
+    lastY: null,
+    xDiff: null,
+    yDiff: null
+};
+
+function onMouseMove(e) {
+
+    if (!hasLock) {
+        return;
+    }
+
+    var movementX = e.movementX || e.mozMovementX || e.webkitMovementX || 0,
+        movementY = e.movementY || e.mozMovementY || e.webkitMovementY || 0;
+//
+//
+//    // Current location
+//    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+//    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+//
+//    // Update diffs
+//    if (mouse.lastX != null) {
+//        mouse.xDiff = mouse.lastX - mouse.x;
+//    }
+//
+//    if (mouse.lastY != null) {
+//        mouse.yDiff = mouse.lastY - mouse.y;
+//    }
+
+
+    // Handle camera rotation
+
+//    var relativeXPos = mouse.x - (window.innerWidth / 2),
+//        relativeYPos = mouse.y - (window.innerHeight / 2);
+
+    //console.log(e, movementX, movementY);
+
+    var playerHorizontalAngleSpeed = Math.PI / 180 * -movementX,
+        playerVerticalAngleSpeed = Math.PI / 360 * movementY;
+
+    //player.rotateOnAxis( new THREE.Vector3(0,0,1), playerAngleSpeed);
+    player.rotateOnAxis( new THREE.Vector3(0,0,1), playerHorizontalAngleSpeed );
+    player.rotateOnAxis( new THREE.Vector3(1,0,0), playerVerticalAngleSpeed );
+
+
+    // Update
+//    mouse.lastX = mouse.x;
+//    mouse.lastY = mouse.y;
+
+}
  
  //scroll input handling
 function onMouseScroll(event, delta, deltaX, deltaY) {
+
+    if (!hasLock) {
+        return;
+    }
+
     if (deltaY > 0) {
         //scroll up 
         //console.log("scrollup");
@@ -1083,6 +1265,11 @@ function onMouseScroll(event, delta, deltaX, deltaY) {
 }
 
 function onMouseUp(event) {
+
+    if (!hasLock) {
+        return;
+    }
+
 
     //console.log('down', event);
     event.preventDefault();
