@@ -1,5 +1,6 @@
 'use strict';
 
+Physijs.scripts.worker = 'js/libs/physijs_worker.js';
 
 THREE.Plane3RandGeometry = function ( width, height, widthSegments, heightSegments ) {
 
@@ -208,14 +209,14 @@ var SCREEN_HEIGHT = window.innerHeight;
 
 var camera, plControls, controls, scene, renderer, cameraPlaceholder, cameraPlaceholderHelper, gameCameraTarget, planes, projector;
 var horse, castle, player, tree;
-var container, stats;
+var container, stats, physicsStats;
 
 var NEAR = 1, FAR = 2000;
 
 var worldWidth = 64;
 var worldDepth = 64;
 
-var cube, terrain, terrain2, terrain3, water;
+var cube, ground, hills, terrain3, water;
 //var sceneHUD, cameraOrtho, hudMaterial;
 
 var light, light2, lightRig, ambient, moon;
@@ -433,6 +434,8 @@ init();
 
 function init() {
 
+    //TWEEN.start();
+
     container = document.createElement( 'div' );
     document.body.appendChild( container );
 
@@ -457,8 +460,22 @@ function init() {
     
     // SCENE
 
-    scene = new THREE.Scene();
+    //scene = new THREE.Scene();
+    scene = new Physijs.Scene({ fixedTimeStep: 1 / 120 });
     scene.fog = new THREE.Fog( 0xffffff, 1000, FAR );
+
+    scene.setGravity(new THREE.Vector3( 0, 0, -30 ));
+    scene.addEventListener(
+        'update',
+        function() {
+            scene.simulate( undefined, 2 );
+            physicsStats.update();
+        }
+    );
+
+
+
+
     //THREE.ColorUtils.adjustHSV( scene.fog.color, 0.02, -0.15, -0.65 );
     
     
@@ -598,12 +615,19 @@ function init() {
     renderer.shadowMapSoft =  true;
     
     // STATS
-    
+
     stats = new Stats();
     stats.domElement.style.position = 'absolute';
     stats.domElement.style.top = '0px';
     stats.domElement.style.zIndex = 100;
     container.appendChild( stats.domElement );
+
+    physicsStats = new Stats();
+    physicsStats = new Stats();
+    physicsStats.domElement.style.position = 'absolute';
+    physicsStats.domElement.style.top = '50px';
+    physicsStats.domElement.style.zIndex = 100;
+    container.appendChild( physicsStats.domElement );
     
     
     // TESTING CONTROLS
@@ -639,15 +663,18 @@ function createRandomPlane(x, y, material, multiplier, subtractor) {
         terrainGeometry.vertices[ i ].z = data[ i ] * multiplier - subtractor;
     }
 
-    terrainGeometry.computeCentroids();
     terrainGeometry.computeFaceNormals();
+    terrainGeometry.computeVertexNormals();
+    terrainGeometry.computeCentroids();
 
-    var t = new THREE.Mesh( terrainGeometry, material  );
+    //var t = new THREE.Mesh( terrainGeometry, material  );
+    var t = new Physijs.HeightfieldMesh(terrainGeometry, material, 0, worldWidth - 1, worldDepth - 1);
     t.castShadow = true;
     t.receiveShadow = true;
     return t;
 }
 
+var bumper;
 
 function createScene( ) {
 
@@ -701,23 +728,34 @@ function createScene( ) {
 //    var geo = new THREE.PlaneGeometry(terrainSize, terrainSize, 10, 10);
 //        //new THREE.CubeGeometry(terrainSize, terrainSize, 1);
 //    geo.computeFaceNormals();
-//    terrain = new THREE.Mesh(geo, new THREE.MeshLambertMaterial /*THREE.MeshPhongMaterial*/( { color: 0x557733, shading: THREE.FlatShading }));
+//    ground = new THREE.Mesh(geo, new THREE.MeshLambertMaterial /*THREE.MeshPhongMaterial*/( { color: 0x557733, shading: THREE.FlatShading }));
 
-    terrain = createRandomPlane(terrainSize, terrainSize, new THREE.MeshLambertMaterial /*THREE.MeshPhongMaterial*/( { color: 0x557733, shading: THREE.FlatShading } ), .25, 6);
+    var groundPhysMaterial = Physijs.createMaterial(
+        new THREE.MeshLambertMaterial( { color: 0x557733, shading: THREE.FlatShading } ),
+        .8, // high friction
+        .4 // low restitution
+    );
 
-    scene.add( terrain );
+    ground = createRandomPlane(terrainSize, terrainSize, groundPhysMaterial, .25, 6);
 
+    scene.add( ground );
 
-    terrain2 = createRandomPlane(terrainSize, terrainSize, new THREE.MeshLambertMaterial /*THREE.MeshPhongMaterial*/( { color: 0xFAD55C, shading: THREE.FlatShading } ), .75, 35);
-    //terrain2.position.z = -10
-    scene.add( terrain2 );
+    var hillsPhysMaterial = Physijs.createMaterial(
+        new THREE.MeshLambertMaterial( { color: 0xFAD55C, shading: THREE.FlatShading } ),
+        .8, // high friction
+        .4 // low restitution
+    );
+
+    hills = createRandomPlane(terrainSize, terrainSize, hillsPhysMaterial, .75, 35);
+    //hills.position.z = -10
+    scene.add( hills );
 
     //terrain3 = createRandomPlane(terrainSize, terrainSize, new THREE.MeshLambertMaterial /*THREE.MeshPhongMaterial*/( { color: 0x6E3518, shading: THREE.FlatShading } ), .55, 40);
     //scene.add( terrain3 );
-    //terrain2.position.z = -30
+    //hills.position.z = -30
 
-    //planes = [ water, terrain, terrain2, terrain3 ];
-    planes = [ water, terrain];
+    //planes = [ water, ground, hills, terrain3 ];
+    planes = [ water, ground ];
 
     //
     // CUBE
@@ -745,14 +783,33 @@ function createScene( ) {
             specular: 0x050505,
             shininess: 100
         } ) ;// new THREE.MeshPhongMaterial( { color: 0xeeeeee } );
-    } 
+    }
     
     var cubeGeo = new THREE.CubeGeometry( 1, 1, 2, 1, 1, 1 );
-    player = new THREE.Mesh( cubeGeo, cubeMaterials);
+
+    var playerPhysMaterials = Physijs.createMaterial(
+        cubeMaterials,
+        .8, // high friction
+        .4 // low restitution
+    );
+
+//    player = new Physijs.BoxMesh(
+//        cubeGeo,
+//        playerPhysMaterials,
+//        0
+//    );
+
+
+
+//    player = new THREE.Mesh( cubeGeo, cubeMaterials);
+    player = new THREE.Mesh( cubeGeo, playerPhysMaterials);
     player.castShadow = true;
     player.receiveShadow = true;
-
     scene.add( player );
+
+
+
+
 
 
     //player = cube;
@@ -849,6 +906,104 @@ function createScene( ) {
 
 }
 
+function addBumpber() {
+
+//    var box_geometry = new THREE.CubeGeometry( 3, 3, 3 ),
+//        sphere_geometry = new THREE.SphereGeometry( 1.5, 32, 32 ),
+//        cylinder_geometry = new THREE.CylinderGeometry( 2, 2, 1, 32 ),
+//        cone_geometry = new THREE.CylinderGeometry( 0, 2, 4, 32 ),
+//        octahedron_geometry = new THREE.OctahedronGeometry( 1.7, 1 ),
+//        torus_geometry = new THREE.TorusKnotGeometry ( 1.7, .2, 32, 4 );
+//
+//    var shape, material = new THREE.MeshLambertMaterial( { color: 0xCCCCCC, shading: THREE.FlatShading } );
+//
+//    switch ( Math.floor(Math.random() * 6) ) {
+//        case 0:
+//            shape = new Physijs.BoxMesh(
+//                box_geometry,
+//                material
+//            );
+//            break;
+//
+//        case 1:
+//            shape = new Physijs.SphereMesh(
+//                sphere_geometry,
+//                material,
+//                undefined,
+//                { restitution: Math.random() * 1.5 }
+//            );
+//            break;
+//
+//        case 2:
+//            shape = new Physijs.CylinderMesh(
+//                cylinder_geometry,
+//                material
+//            );
+//            break;
+//
+//        case 3:
+//            shape = new Physijs.ConeMesh(
+//                cone_geometry,
+//                material
+//            );
+//            break;
+//
+//        case 4:
+//            shape = new Physijs.ConvexMesh(
+//                octahedron_geometry,
+//                material
+//            );
+//            break;
+//
+//        case 5:
+//            shape = new Physijs.ConvexMesh(
+//                torus_geometry,
+//                material
+//            );
+//            break;
+//    }
+//
+//    //shape.material.color.setRGB( Math.random() * 100 / 100, Math.random() * 100 / 100, Math.random() * 100 / 100 );
+//    shape.castShadow = true;
+//    shape.receiveShadow = true;
+//
+//    shape.position.set(player.position.x, player.position.y, player.position.z + 2);
+//    shape.rotation.set(
+//        Math.random() * Math.PI,
+//        Math.random() * Math.PI,
+//        Math.random() * Math.PI
+//    );
+//
+//    scene.add(shape);
+
+
+    var bumperGeo = new THREE.SphereGeometry( 0.25, 12, 12 );
+
+    var bumperMat = Physijs.createMaterial(
+        new THREE.MeshLambertMaterial( { color: 0xCCCCCC, shading: THREE.FlatShading } ),
+        .8, // high friction
+        .4 // low restitution
+    );
+
+    var bumper = new Physijs.SphereMesh(
+        bumperGeo,
+        bumperMat,
+        0.1,
+        { restitution: Math.random() * 1.5 }
+    );
+
+//    bumper = new THREE.Mesh(bumperGeo, new THREE.MeshLambertMaterial( { color: 0xCCCCCC, shading: THREE.FlatShading } ));
+
+    bumper.position.x = player.position.x;
+    bumper.position.y = player.position.y;
+    bumper.position.z = player.position.z + 2;
+
+    bumper.receiveShadow = true;
+    bumper.castShadow = true;
+    scene.add( bumper );
+
+}
+
 function addTree(x, y, z) {
     if (z == null) {
         var c = intersectGroundObjs(x, y);
@@ -917,7 +1072,7 @@ function intersectGround(x, y) {
     if (c.length > 0) {
         var zMax = null;
         for(var i = 0; i < c.length; i++) {
-            //console.log(c[i], c[i].object == terrain, c[i].object == water);
+            //console.log(c[i], c[i].object == ground, c[i].object == water);
             if (zMax == null) {
                 zMax = c[i].point.z;
             } else {
@@ -954,7 +1109,7 @@ function intersectGroundObjs(x, y) {
 
     //r.set(origin.clone(), direction.clone());
 
-    var c = r.intersectObjects([ terrain, water, terrain2 ], true);
+    var c = r.intersectObjects([ ground, water, hills ], true);
 
 
     //console.log('colls', c);
@@ -1010,6 +1165,7 @@ var speed = 0.2, angleSpeed = 0.1;
 function animate() {
 
     requestAnimationFrame( animate );
+    scene.simulate();
 
     render();
     stats.update();
@@ -1044,11 +1200,19 @@ function animate() {
         lockPlayerZ();
         playerMoved = true;
     }
-    
-    if (isKeyDown(KEYCODE.D)) { 
+
+    if (isKeyDown(KEYCODE.D)) {
         //player.position.x -= 0.10;
 
         player.translateX(-playerSpeed);
+        lockPlayerZ();
+        playerMoved = true;
+    }
+
+    if (isKeyDown(KEYCODE.Z)) {
+        //player.position.x -= 0.10;
+
+        player.position.set(0,0,0);
         lockPlayerZ();
         playerMoved = true;
     }
@@ -1274,18 +1438,23 @@ function onMouseUp(event) {
     //console.log('down', event);
     event.preventDefault();
 
-    var mouse = {};
-    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    if (isKeyDown(KEYCODE.SHIFT)) {
+        addBumpber();
+    } else {
 
-    var vector = new THREE.Vector3(mouse.x, mouse.y, 0.5);
-    projector.unprojectVector(vector, camera);
-    var raycaster = new THREE.Raycaster(camera.position, vector.sub(camera.position).normalize());
+        var mouse = {};
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
-    var intersects = raycaster.intersectObjects([ terrain, terrain2 ], true);
+        var vector = new THREE.Vector3(mouse.x, mouse.y, 0.5);
+        projector.unprojectVector(vector, camera);
+        var raycaster = new THREE.Raycaster(camera.position, vector.sub(camera.position).normalize());
 
-    if (intersects.length > 0) {
-        addTree(intersects[0].point.x, intersects[0].point.y, intersects[0].point.z);
+        var intersects = raycaster.intersectObjects([ ground, hills ], true);
+
+        if (intersects.length > 0) {
+            addTree(intersects[0].point.x, intersects[0].point.y, intersects[0].point.z);
+        }
     }
 }
 

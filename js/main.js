@@ -564,13 +564,13 @@ function createScene( ) {
     scene.add( terrain );
 
 
-    //terrain2 = createRandomPlane(terrainSize, terrainSize, new THREE.MeshLambertMaterial /*THREE.MeshPhongMaterial*/( { color: 0xFAD55C, shading: THREE.FlatShading } ), .75, 10);
-    //scene.add( terrain2 );
+    //hills = createRandomPlane(terrainSize, terrainSize, new THREE.MeshLambertMaterial /*THREE.MeshPhongMaterial*/( { color: 0xFAD55C, shading: THREE.FlatShading } ), .75, 10);
+    //scene.add( hills );
 
     //terrain3 = createRandomPlane(terrainSize, terrainSize, new THREE.MeshLambertMaterial /*THREE.MeshPhongMaterial*/( { color: 0x6E3518, shading: THREE.FlatShading } ), .55, 10);
     //scene.add( terrain3 );
 
-    //planes = [ water, terrain, terrain2, terrain3 ];
+    //planes = [ water, ground, hills, terrain3 ];
     planes = [ ground, terrain];
 
     //
