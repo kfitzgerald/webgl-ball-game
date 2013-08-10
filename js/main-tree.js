@@ -1005,7 +1005,7 @@ function updateChaseCamLocation() {
 }
 
 
-var speed = 0.1, angleSpeed = 0.1;
+var speed = 0.2, angleSpeed = 0.1;
 
 function animate() {
 
@@ -1021,7 +1021,7 @@ function animate() {
     updateChaseCamLocation();
 
     var playerMoved = false,
-        playerSpeed = speed,
+        playerSpeed = isKeyDown(KEYCODE.SHIFT) ? speed * 2 : speed,
         playerAngleSpeed = Math.PI / 2 * angleSpeed;
     
     if (isKeyDown(KEYCODE.W)) { 
