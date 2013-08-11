@@ -110,6 +110,27 @@ body {
     background: -ms-linear-gradient(top, #b5bdc8 0%,#828c95 36%,#28343b 100%); /* IE10+ */
     background: linear-gradient(to bottom, #b5bdc8 0%,#828c95 36%,#28343b 100%); /* W3C */
     filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#b5bdc8', endColorstr='#28343b',GradientType=0 ); /* IE6-9 */
+
+}
+
+#pagewrapper {
+    height: 100%;
+    width: 100%;
+    display: block;
+    position: absolute;
+    /*opacity: 0;*/
+
+    background-color: #333;
+    z-index: -1;
+
+    -moz-transition: opacity 5s, background-color 2s, -moz-transform 2s;
+    -webkit-transition: opacity 5s, background-color 2s, -webkit-transform 2s;
+    -o-transition: opacity 5s, background-color 2s, -o-transform 2s;
+    transition: opacity 5s, background-color 2s, transform 2s;
+}
+
+#pagewraper.night {
+    opacity: 1;
 }
 
 #info {

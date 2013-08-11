@@ -52,9 +52,10 @@ var mouse = {
     yDiff: null
 };
 
+
 // ***** POINTER LOCK **************************************************************************************************
 
-
+var wrapperSelector;
 var blocker = document.getElementById( 'blocker' );
 var instructions = document.getElementById( 'instructions' );
 var havePointerLock = 'pointerLockElement' in document || 'mozPointerLockElement' in document || 'webkitPointerLockElement' in document;
@@ -172,6 +173,7 @@ function init() {
     document.addEventListener( 'mouseup', onMouseUp, false );
     document.addEventListener( 'mousemove', onMouseMove, false );
 
+    wrapperSelector = $('#pagewrapper');
     $('body').mousewheel( onMouseScroll ) ;
 //    $('body').mouseup( onMouseUp ) ;
 //    $('body').mousemove( onMouseMove );
@@ -471,16 +473,38 @@ function createScene( ) {
         .4 // low restitution
     );
 
-//    player = new Physijs.BoxMesh(
-//        cubeGeo,
-//        playerPhysMaterials,
-//        0
-//    );
+    player = new Physijs.BoxMesh(
+        cubeGeo,
+        playerPhysMaterials,
+        0
+    );
+
+    player.userData.hp = 100.0;
+
+    player.addEventListener( 'collision', function( other_object, relative_velocity, relative_rotation, contact_normal ) {
+        // `this` has collided with `other_object` with an impact speed of `relative_velocity` and a rotational force of `relative_rotation` and at normal `contact_normal`
+        //console.log(other_object, relative_velocity);
+        if (other_object.material.color.g < 0.5) {
+            console.log('ouch!', relative_velocity, relative_velocity.length(), player.userData.hp -= relative_velocity.length());
+
+            scene.remove(other_object);
+            other_object = null;
+
+            if (player.userData.hp < 0) {
+                player.position.set(0,0,0);
+                player.__dirtyPosition = true;
+                player.__dirtyRotation = true;
+                lockPlayerZ();
+                player.userData.hp = 100;
+                console.log(' *** DEAD *** ');
+            }
+        }
+    });
 
 
 
 //    player = new THREE.Mesh( cubeGeo, cubeMaterials);
-    player = new THREE.Mesh( cubeGeo, playerPhysMaterials);
+//    player = new THREE.Mesh( cubeGeo, playerPhysMaterials);
     player.castShadow = true;
     player.receiveShadow = true;
     scene.add( player );
@@ -594,10 +618,6 @@ function render() {
 function animate() {
 
     requestAnimationFrame( animate );
-    scene.simulate();
-
-    render();
-    stats.update();
 
     if (!hasLock) {
         return;
@@ -612,6 +632,8 @@ function animate() {
     if (isKeyDown(KEYCODE.W)) {
         //player.position.y -= 0.10;
         player.translateY(-playerSpeed);
+        player.__dirtyPosition = true;
+        player.__dirtyRotation = true;
         lockPlayerZ();
         playerMoved = true;
     }
@@ -619,6 +641,8 @@ function animate() {
     if (isKeyDown(KEYCODE.S)) {
         //player.position.y += 0.10;
         player.translateY(playerSpeed);
+        player.__dirtyPosition = true;
+        player.__dirtyRotation = true;
         lockPlayerZ();
         playerMoved = true;
     }
@@ -626,6 +650,8 @@ function animate() {
     if (isKeyDown(KEYCODE.A)) {
 //        player.position.x += 0.10;
         player.translateX(playerSpeed);
+        player.__dirtyPosition = true;
+        player.__dirtyRotation = true;
         lockPlayerZ();
         playerMoved = true;
     }
@@ -634,6 +660,8 @@ function animate() {
         //player.position.x -= 0.10;
 
         player.translateX(-playerSpeed);
+        player.__dirtyPosition = true;
+        player.__dirtyRotation = true;
         lockPlayerZ();
         playerMoved = true;
     }
@@ -642,6 +670,8 @@ function animate() {
         //player.position.x -= 0.10;
 
         player.position.set(0,0,0);
+        player.__dirtyPosition = true;
+        player.__dirtyRotation = true;
         lockPlayerZ();
         playerMoved = true;
     }
@@ -662,12 +692,16 @@ function animate() {
     if (isKeyDown(KEYCODE.LEFT_ARROW)) {
         //player.rotation.x -= Math.PI / 20;
         player.rotateOnAxis( new THREE.Vector3(0,0,1), playerAngleSpeed);
+        player.__dirtyRotation = true;
+        player.__dirtyPosition = true;
         //playerMoved = true;
     }
 
     if (isKeyDown(KEYCODE.RIGHT_ARROW)) {
         //player.rotation.x += Math.PI / 20;
         player.rotateOnAxis( new THREE.Vector3(0,0,1), -playerAngleSpeed);
+        player.__dirtyRotation = true;
+        player.__dirtyPosition = true;
         //playerMoved = true;
     }
 
@@ -711,15 +745,7 @@ function animate() {
 
     if (isKeyDown(KEYCODE.L)) {
         if (!isWaitRequired(KEYCODE.L)) {
-            var lineMat = new THREE.LineBasicMaterial({ color: 0x0000ff }),
-                lineGeo = new THREE.Geometry();
-
-            lineGeo.vertices.push(player.position);
-            //player.l
-            lineGeo.vertices.push(new THREE.Vector3(player.position.x, player.position.y, player.position.z));
-            var line = new THREE.Line(lineGeo, lineMat);
-            //console.log(upperZ, lowerZ, origin, direction);
-            scene.add(line);
+            drawPlayerLazer();
         }
     }
 
@@ -742,18 +768,40 @@ function animate() {
         light.intensity = Math.abs(lightRig.rotation.y / Math.PI % 2) < 1 ? Math.min(1.3, Math.sin(Math.abs(lightRig.rotation.y / Math.PI % 2) * Math.PI)*2) : 0
         light2.intensity = Math.abs(lightRig.rotation.y / Math.PI % 2) < 1 ? Math.min(1.3, Math.sin(Math.abs(lightRig.rotation.y / Math.PI % 2) * Math.PI)*2) : 0
         light.shadowDarkness = Math.abs(lightRig.rotation.y / Math.PI % 2) < 1 ? Math.min(0.25, Math.sin(Math.abs(lightRig.rotation.y / Math.PI % 2) * Math.PI)/2) : 0
+
+        if (Math.abs(lightRig.rotation.y / Math.PI % 2) < 1) {
+            wrapperSelector.css('opacity', 0);
+        } else {
+            wrapperSelector.css('opacity', 1);
+        }
+
     }
 
     // Color balls based on speed
     for(var i in balls) {
-        var r = Math.max(0.8, Math.min(balls[i].getLinearVelocity().length(), 1.0)),
-            mod = 0.8 - (r-0.8);
-        balls[i].material.color.r = r;
+        if (balls[i] == null) {
+            delete balls[i];
+            continue;
+        } else if (balls[i].position.z < -50) {
+            scene.remove(balls[i]);
+            balls[i] = null;
+            delete balls[i];
+            continue;
+        }
+
+        var r = Math.max(0, Math.min(balls[i].getLinearVelocity().length()/10, 1.0)),
+            mod = 1.0 - (r);
+        balls[i].material.color.r = 1;
         balls[i].material.color.g = mod;
         balls[i].material.color.b = mod;
 
     }
 
+
+
+    render();
+    stats.update();
+    scene.simulate();
 }
 
 // ***** EVENT LISTENERS ***********************************************************************************************
@@ -831,7 +879,8 @@ function onMouseMove(e) {
     //player.rotateOnAxis( new THREE.Vector3(0,0,1), playerAngleSpeed);
     player.rotateOnAxis( new THREE.Vector3(0,0,1), playerHorizontalAngleSpeed );
     player.rotateOnAxis( new THREE.Vector3(1,0,0), playerVerticalAngleSpeed );
-
+    player.__dirtyRotation = true;
+    player.__dirtyPosition = true;
 
     // Update
 //    mouse.lastX = mouse.x;
@@ -852,7 +901,7 @@ function onMouseScroll(event, delta, deltaX, deltaY) {
         if (!chaseCamEnabled) {
             camera.position.multiplyScalar(1.1);
         } else {
-            chaseScale = Math.max(0.5, chaseScale - 0.1);
+            chaseScale = Math.max(0.05, chaseScale - 0.1);
         }
     } else if (deltaY < 0) {
         //scroll down
@@ -922,7 +971,6 @@ function createRandomPlane(x, y, material, multiplier, subtractor) {
     return t;
 }
 
-var ballLaunchSpeed = new THREE.Vector3(5,1,1);
 function addBumpber() {
 
 //    var box_geometry = new THREE.CubeGeometry( 3, 3, 3 ),
@@ -1094,9 +1142,11 @@ function lockPlayerZ() {
 
     var z = intersectGround(player.position.x, player.position.y);
     if (z != null) {
-        var diff = z - player.position.z;
+        var diff = z - player.position.z + 1;
         //player.position.z += diff;
         player.translateZ(diff);
+        player.__dirtyPosition = true;
+        player.__dirtyRotation = true;
     }
 }
 
@@ -1185,6 +1235,8 @@ function updateChaseCamLocation() {
 
 
         var target = player.position.clone();
+        target.z += 2;
+        camera.position.z += 2;
         camera.lookAt(target);
         //console.log(camera.rotation);
     }
@@ -1209,7 +1261,7 @@ function drawLazer(mesh) {
     lineGeo.vertices.push(origin);
     lineGeo.vertices.push(target);
     var line = new THREE.Line(lineGeo, lineMat);
-    console.log(line);
+    //console.log(line);
     scene.add(line);
 }
 
