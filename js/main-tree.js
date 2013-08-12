@@ -43,6 +43,8 @@ var chaseScale = 2.5;
 var toggleWatchers = {};
 var speed = 0.2, angleSpeed = 0.1;
 
+var loaded = false;
+
 var mouse = {
     x: null,
     y: null,
@@ -68,11 +70,13 @@ if ( havePointerLock ) {
 
         if ( document.pointerLockElement === element || document.mozPointerLockElement === element || document.webkitPointerLockElement === element ) {
 
-            //controls.enabled = true;
-            hasLock = true;
-            clock.start();
+            if (loaded) {
+                //controls.enabled = true;
+                hasLock = true;
+                clock.start();
 
-            blocker.style.display = 'none';
+                blocker.style.display = 'none';
+            }
 
         } else {
 
@@ -619,8 +623,10 @@ function animate() {
 
     requestAnimationFrame( animate );
 
-    if (!hasLock) {
+    if (!hasLock && loaded) {
         return;
+    } else if (!loaded) {
+        loaded = true;
     }
 
     updateChaseCamLocation();
