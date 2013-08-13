@@ -192,7 +192,7 @@ function init() {
     scene.addEventListener(
         'update',
         function() {
-            scene.simulate( undefined, 2 );
+            scene.simulate( undefined, 1 );
             physicsStats.update();
         }
     );
@@ -206,55 +206,13 @@ function init() {
     // SCENE CAMERA
 
     camera = new THREE.PerspectiveCamera( 45, SCREEN_WIDTH / SCREEN_HEIGHT, NEAR, FAR );
-    //gameCameraTarget = new THREE.Vector3(0,0,0);
-
-    //plControls = new THREE.PointerLockControls(camera);
-    //scene.add(plControls.getObject());
-
     projector = new THREE.Projector();
-
-    //camera.position.set( 0, -10, 10 );
-    //camera.rotation.setX(Math.PI/4);
-    //camera.lookAt(scene.position);
-	
-
-
-	//camera.position.x = -120.99318691416968;
-	//camera.position.y = -37.705309121503035;
-	//camera.position.z = 55.23685574177473;
-
-	
-
-	//camera.rotation.x = 1.4609687721031974;
-	//camera.rotation.y = -0.7819771154302685;
-	//camera.rotation.z = -0.051950711527804484;
-
-
-    camera.position.set(0, 8, 16);
-    //camera.lookAt(gameCameraTarget);
-    camera.lookAt(scene.position);
     camera.up.y = 0;
     camera.up.z = 1;
     //cameraPlaceholderHelper = new THREE.CameraHelper( camera );
     //scene.add( cameraPlaceholderHelper );
 
-	//camera.position.set( -120.99318691416968, -37.
-	// 705309121503035, 55.23685574177473 );
-	//camera.rotation.set( 1.4609687721031974, -0.7819771154302685, -0.051950711527804484 );
-    //camera.up.x =  0.5243388972589702;
-	//camera.up.y =  0.5503652213423956;
-	//camera.up.z = 0.6497436755813536;
-	
-    // CAMERA PLACEHOLDER
-//    cameraPlaceholder = new THREE.PerspectiveCamera( 23, SCREEN_WIDTH / SCREEN_HEIGHT, NEAR, FAR );
-//    cameraPlaceholder.position.set( 0, -10, 10 );
-//    cameraPlaceholder.rotation.setX(Math.PI/4);
-//    scene.add( cameraPlaceholder );
-//    cameraPlaceholderHelper = new THREE.CameraHelper( cameraPlaceholder );
-//    scene.add( cameraPlaceholderHelper );
-//    cameraPlaceholderHelper.visible = true;
-    
-    
+
     // LIGHTS
 
     ambient = new THREE.AmbientLight( 0x000000 );
@@ -511,6 +469,21 @@ function createScene( ) {
 //    player = new THREE.Mesh( cubeGeo, playerPhysMaterials);
     player.castShadow = true;
     player.receiveShadow = true;
+
+
+    player.add(camera);
+
+    camera.position.set(0, 3 * chaseScale, 1 * chaseScale + 1);
+    camera.lookAt(scene.position);
+
+    var cameraOffset = new THREE.Vector3(0,0,0),
+        radius = Math.sqrt((3 * chaseScale) * (3 * chaseScale) + (1 * chaseScale) * (1 * chaseScale)),
+        normalizedCameraPos = camera.position.clone().sub(cameraOffset).normalize().multiplyScalar(radius),
+        shortRadius = normalizedCameraPos.distanceTo(new THREE.Vector3(0,0,0));
+
+    // Init the chase angle
+    chaseAngle = Math.asin((normalizedCameraPos.z) / radius);
+
     scene.add( player );
 
 
@@ -533,6 +506,12 @@ function createScene( ) {
     var loader = new THREE.JSONLoader();
     loader.load( "js/models/tree.js", function( geometry, materials ) {
         treeGeo = geometry;
+
+//        var mats = [];
+//        for(var i = 0; i < materials.length; i++) {
+//            mats[i] = Physijs.createMaterial(materials[i], .5, .1);
+//        }
+
         treeMats = new THREE.MeshFaceMaterial( materials );
         for (var i in treeMats.materials) {
             treeMats.materials[i].shading = THREE.FlatShading;
@@ -544,8 +523,8 @@ function createScene( ) {
                 treeMats.materials[i].emissive.b *= 0.8;
             }
         }
-        tree = new THREE.Mesh( geometry, treeMats );
-        tree.castShadow = true;
+//        tree = new THREE.Mesh( geometry, treeMats );
+//        tree.castShadow = true;
 
         //scene.add(tree);
         addTree(0, 0);
@@ -554,60 +533,12 @@ function createScene( ) {
         for(var i = 0; i < 50; i++) { addTree(Math.random() * 256 - 128, Math.random() * 256 - 128); }
 
         //camera.lookAt(gameCameraTarget);
-        animate();
+        requestAnimationFrame(render);
 
         lockPlayerZ();
     } );
 
 
-
-//    var loader = new THREE.JSONLoader( true );
-//    loader.load( "js/models/horse.js", function( geometry ) {
-//
-//        horse = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( { color: 0x606060/*, morphTargets: true*/ } ) );
-//        horse.scale.set( .015, .015, .015 );
-//        horse.rotation.x = Math.PI / 2;
-//        horse.position.z = 1;
-//        horse.castShadow = true;
-//        horse.center.point
-//        horse.receiveShadow = true;
-//        scene.add( horse );
-//
-//        animate(); // LAST THING TO DO
-//        camera.lookAt(gameCameraTarget);
-//
-//    } );
-
-
-//	var loader2 = new THREE.ColladaLoader();
-//	//loader2.options.convertUpAxis = true;
-//	loader2.load( 'js/models/castle-no-water.dae', function ( collada ) {
-//
-//		// Grab the collada scene data:
-//		castle = collada.scene;
-//
-//		// No skin applied to my model so no need for the following:
-//		var skin = collada.skins[ 0 ];
-//
-//		// Scale-up the model so that we can see it:
-//		castle.scale.x = castle.scale.y = castle.scale.z = 0.02;
-//
-//		castle.position.x = 100;
-//		castle.position.y = -20;
-//		castle.position.z = -40;
-//
-//		castle.castShadow = true;
-//		castle.receiveShadow = true;
-//
-//		castle.updateMatrix();
-//
-//		scene.add(castle);
-//
-//
-//		animate();
-//
-//
-//	  });
 
 
 }
@@ -616,12 +547,17 @@ function createScene( ) {
 
 function render() {
     var delta = clock.getDelta();
+    animate(delta);
+    stats.update();
+    scene.simulate(delta);
     renderer.render( scene, camera );
+
+    requestAnimationFrame( render );
 }
 
-function animate() {
+function animate(delta) {
 
-    requestAnimationFrame( animate );
+
 
     if (!hasLock && loaded) {
         return;
@@ -755,6 +691,12 @@ function animate() {
         }
     }
 
+    if (isKeyDown(KEYCODE.B)) {
+        if (!isWaitRequired(KEYCODE.B)) {
+            deleteBalls();
+        }
+    }
+
 
     //light.target.position.copy(cameraPlaceholder.position);  // target the light at the camera
     //light.position.copy(cameraPlaceholder.position).addSelf(light.sunLightPos); // position the light at the camera + offset
@@ -805,9 +747,7 @@ function animate() {
 
 
 
-    render();
-    stats.update();
-    scene.simulate();
+    //render();
 }
 
 // ***** EVENT LISTENERS ***********************************************************************************************
@@ -848,6 +788,9 @@ function onKeyUp(event) {
     }
 }
 
+var chaseAngle = 0,
+    cameraOffset = new THREE.Vector3(0,0,3);
+
 function onMouseMove(e) {
 
     if (!hasLock) {
@@ -856,35 +799,133 @@ function onMouseMove(e) {
 
     var movementX = e.movementX || e.mozMovementX || e.webkitMovementX || 0,
         movementY = e.movementY || e.mozMovementY || e.webkitMovementY || 0;
-//
-//
-//    // Current location
-//    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-//    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-//
-//    // Update diffs
-//    if (mouse.lastX != null) {
-//        mouse.xDiff = mouse.lastX - mouse.x;
-//    }
-//
-//    if (mouse.lastY != null) {
-//        mouse.yDiff = mouse.lastY - mouse.y;
-//    }
-
-
-    // Handle camera rotation
-
-//    var relativeXPos = mouse.x - (window.innerWidth / 2),
-//        relativeYPos = mouse.y - (window.innerHeight / 2);
-
-    //console.log(e, movementX, movementY);
 
     var playerHorizontalAngleSpeed = Math.PI / 180 * -movementX,
         playerVerticalAngleSpeed = Math.PI / 360 * movementY;
 
+    var radius = Math.sqrt((3 * chaseScale) * (3 * chaseScale) + (1 * chaseScale) * (1 * chaseScale)),
+        normalizedCameraPos = camera.position.clone().sub(cameraOffset).normalize().multiplyScalar(radius),
+        shortRadius = normalizedCameraPos.distanceTo(new THREE.Vector3(0,0,0));
+
+
+    //var currAngle = Math.asin((normalizedCameraPos.z) / radius);
+    var currAngle = chaseAngle,
+        angleDiff = (movementY / 25) / radius,
+        newAngle = Math.max(-1.5, Math.min(1.5, currAngle + angleDiff));
+
+//    var angle = (movementY/25) / radius;
+
+//    var sumAngle = currAngle + angle;
+
+    var x = Math.cos(newAngle) * radius;
+    var y = Math.sqrt(radius * radius - x * x);
+
+    y = newAngle > 0 ? y : -y;
+
+    x = Math.max(x, 0.5);
+
+    //console.log(movementY, radius, currAngle, angle, sumAngle, x, y);
+
     //player.rotateOnAxis( new THREE.Vector3(0,0,1), playerAngleSpeed);
     player.rotateOnAxis( new THREE.Vector3(0,0,1), playerHorizontalAngleSpeed );
-    player.rotateOnAxis( new THREE.Vector3(1,0,0), playerVerticalAngleSpeed );
+    //camera.rotateOnAxis( new THREE.Vector3(1,0,0), playerVerticalAngleSpeed );
+
+    var oldX = camera.position.x,
+        oldY = camera.position.y,
+        oldZ = camera.position.z;
+
+    camera.position.set(camera.position.x, x, y);
+
+
+    // adjust for ground collision
+    var cameraWorldPos = (new THREE.Vector3()).getPositionFromMatrix(camera.matrixWorld);
+    var origin = player.position.clone(),
+        direction = cameraWorldPos.clone().sub(origin);
+
+//    var lineMat = new THREE.LineBasicMaterial({ color: 0x0000ff }),
+//        lineGeo = new THREE.Geometry();
+//
+//    lineGeo.vertices.push(origin);
+//    lineGeo.vertices.push(direction);
+//    var line = new THREE.Line(lineGeo, lineMat);
+//    //console.log(upperZ, lowerZ, origin, direction);
+//    scene.add(line);
+
+    //console.log(origin, direction, 0, radius, origin.distanceTo(direction));
+    //var r = new THREE.Raycaster(origin, direction, 0, radius + 1);
+    var r = new THREE.Raycaster(origin, direction, 0, radius + 1);
+
+    //r.set(origin.clone(), direction.clone());
+
+    var c = r.intersectObjects([ ground, water, hills ], true);
+    if (c.length > 0) {
+        //drawLine(player.position, c[0].point);
+
+        var localCamPos = player.worldToLocal(c[0].point) ; //,
+            //length = localCamPos.length(),
+            //newLength = length - 1,
+            //newLocalCamPos = localCamPos.normalize().multiplyScalar(newLength);
+
+        //console.log('in da ground', radius, shortRadius, normalizedCameraPos.length(), currAngle, newAngle/*, c[0].point, player.position.distanceTo(c[0].point)*/);
+
+        //drawLine(player.position, localCamPos);
+
+        // TODO FIXME
+        //camera.position.copy(c[0].point);
+        //camera.position.copy(localCamPos);
+        //camera.position.copy(newLocalCamPos);
+
+    } else {
+        //console.log('normal', radius, shortRadius, normalizedCameraPos.length(), currAngle, newAngle);
+    }
+
+
+    //console.log('colls', c);
+
+
+    camera.position.add(cameraOffset);
+
+
+
+
+//    // Test for ground collision
+//    var cameraWorldPos = (new THREE.Vector3()).getPositionFromMatrix(camera.matrixWorld);
+//    cameraWorldPos.y += camera.position.y - oldY;
+//    cameraWorldPos.z += camera.position.z - oldY;
+//    var minZ = intersectGround(cameraWorldPos.x, cameraWorldPos.y);
+//    if (cameraWorldPos.z < minZ + 1) {
+//        //console.log('bounce camera', camera.position.z, minZ + 1);
+//        //cameraPos.z = minZ + 1;
+//
+//        var minCameraLocalPos = camera.worldToLocal(cameraWorldPos.setZ(minZ));
+//        var yAdjust = Math.sqrt(radius*radius - minCameraLocalPos.z * minCameraLocalPos.z);
+//
+//        console.log('below ground!', camera.position, minCameraLocalPos, cameraWorldPos, yAdjust);
+//
+//        // Find point on the circle for the y intercept
+//        // Set point to there
+//
+//
+//        //camera.position.setZ(yAdjust + 1);
+//        //camera.position.set(camera.position.x, yAdjust, minCameraLocalPos.z );
+//
+//        camera.position.set(camera.position.x, oldY, oldZ);
+//
+//    }
+
+    camera.lookAt(new THREE.Vector3(0,0,0));
+    chaseAngle = newAngle;
+
+
+//    if (camera.rotation.x < -1.7) {
+//        camera.rotation.x = -1.7;
+//    }
+//
+//    if (camera.rotation.x > -1) {
+//        camera.rotation.x = -1;
+//    }
+
+
     player.__dirtyRotation = true;
     player.__dirtyPosition = true;
 
@@ -900,6 +941,10 @@ function onMouseScroll(event, delta, deltaX, deltaY) {
     if (!hasLock) {
         return;
     }
+
+    var radius = Math.sqrt((3 * chaseScale) * (3 * chaseScale) + (1 * chaseScale) * (1 * chaseScale)),
+        normalizedCameraPos = camera.position.clone().sub(cameraOffset).normalize().multiplyScalar(radius),
+        shortRadius = normalizedCameraPos.distanceTo(new THREE.Vector3(0,0,0));
 
     if (deltaY > 0) {
         //scroll up
@@ -918,6 +963,30 @@ function onMouseScroll(event, delta, deltaX, deltaY) {
             chaseScale = Math.min(5, chaseScale + 0.1);
         }
     }
+
+    var newAngle = chaseAngle,
+        newRadius = Math.sqrt((3 * chaseScale) * (3 * chaseScale) + (1 * chaseScale) * (1 * chaseScale));
+
+    var x = Math.cos(newAngle) * newRadius;
+    var y = Math.sqrt(newRadius * newRadius - x * x);
+
+    y = newAngle > 0 ? y : -y;
+
+    x = Math.max(x, 0.5);
+
+    camera.position.set(camera.position.x, x, y);
+    camera.position.add(cameraOffset);
+
+
+
+
+//
+//    camera.position.set(0, normalizedCameraPos.x, normalizedCameraPos.y);
+//
+//
+//
+    camera.lookAt(new THREE.Vector3(0,0,0));
+
 
     event.stopPropagation();
     event.preventDefault();
@@ -957,6 +1026,62 @@ function onMouseUp(event) {
 // ***** HELPERS *******************************************************************************************************
 
 
+
+function updateChaseCamLocation() {
+    if (chaseCamEnabled) {
+//        var relativeCameraOffset = new THREE.Vector3(0, 3 * chaseScale, 1 * chaseScale);
+//        var cameraOffset = relativeCameraOffset.applyMatrix4(player.matrixWorld);
+//        camera.position.x = cameraOffset.x;
+//        camera.position.y = cameraOffset.y;
+//        camera.position.z = cameraOffset.z;
+//
+        // Test for ground collision
+//        var cameraPos = player.position.clone().add(camera.position);
+//        var minZ = intersectGround(cameraPos.x, cameraPos.y);
+//        if (cameraPos.z < minZ + 1) {
+//            //console.log('bounce camera', camera.position.z, minZ + 1);
+//            cameraPos.z = minZ + 1;
+//
+//        }
+//
+//
+//        var target = player.position.clone();
+//        target.z += 2;
+//        camera.position.z += 2;
+//        camera.lookAt(target);
+//        //console.log(camera.rotation);
+
+
+//        var radius = Math.sqrt((3 * chaseScale) * (3 * chaseScale) + (1 * chaseScale) * (1 * chaseScale));
+//
+//
+//
+//        // Test for ground collision
+//        var cameraWorldPos = (new THREE.Vector3()).getPositionFromMatrix(camera.matrixWorld);
+//        var minZ = intersectGround(cameraWorldPos.x, cameraWorldPos.y);
+//        if (cameraWorldPos.z < minZ + 1) {
+//            //console.log('bounce camera', camera.position.z, minZ + 1);
+//            //cameraPos.z = minZ + 1;
+//
+//            var minCameraLocalPos = camera.worldToLocal(cameraWorldPos.setZ(minZ));
+//            var yAdjust = Math.sqrt(radius*radius - minCameraLocalPos.z * minCameraLocalPos.z);
+//
+//            console.log('below ground!', camera.position, minCameraLocalPos, cameraWorldPos, yAdjust);
+//
+//            // Find point on the circle for the y intercept
+//            // Set point to there
+//
+//
+//            //camera.position.setZ(yAdjust + 1);
+//            camera.position.set(camera.position.x, yAdjust, minCameraLocalPos.z );
+//
+//        }
+//
+//        camera.lookAt(new THREE.Vector3(0,0,0));
+
+    }
+}
+
 function createRandomPlane(x, y, material, multiplier, subtractor) {
     var data = generateHeight( worldWidth, worldDepth );
     var terrainGeometry = new THREE.Plane3RandGeometry( x, y, worldWidth - 1, worldDepth - 1 );
@@ -979,90 +1104,23 @@ function createRandomPlane(x, y, material, multiplier, subtractor) {
 
 function addBumpber() {
 
-//    var box_geometry = new THREE.CubeGeometry( 3, 3, 3 ),
-//        sphere_geometry = new THREE.SphereGeometry( 1.5, 32, 32 ),
-//        cylinder_geometry = new THREE.CylinderGeometry( 2, 2, 1, 32 ),
-//        cone_geometry = new THREE.CylinderGeometry( 0, 2, 4, 32 ),
-//        octahedron_geometry = new THREE.OctahedronGeometry( 1.7, 1 ),
-//        torus_geometry = new THREE.TorusKnotGeometry ( 1.7, .2, 32, 4 );
-//
-//    var shape, material = new THREE.MeshLambertMaterial( { color: 0xCCCCCC, shading: THREE.FlatShading } );
-//
-//    switch ( Math.floor(Math.random() * 6) ) {
-//        case 0:
-//            shape = new Physijs.BoxMesh(
-//                box_geometry,
-//                material
-//            );
-//            break;
-//
-//        case 1:
-//            shape = new Physijs.SphereMesh(
-//                sphere_geometry,
-//                material,
-//                undefined,
-//                { restitution: Math.random() * 1.5 }
-//            );
-//            break;
-//
-//        case 2:
-//            shape = new Physijs.CylinderMesh(
-//                cylinder_geometry,
-//                material
-//            );
-//            break;
-//
-//        case 3:
-//            shape = new Physijs.ConeMesh(
-//                cone_geometry,
-//                material
-//            );
-//            break;
-//
-//        case 4:
-//            shape = new Physijs.ConvexMesh(
-//                octahedron_geometry,
-//                material
-//            );
-//            break;
-//
-//        case 5:
-//            shape = new Physijs.ConvexMesh(
-//                torus_geometry,
-//                material
-//            );
-//            break;
-//    }
-//
-//    //shape.material.color.setRGB( Math.random() * 100 / 100, Math.random() * 100 / 100, Math.random() * 100 / 100 );
-//    shape.castShadow = true;
-//    shape.receiveShadow = true;
-//
-//    shape.position.set(player.position.x, player.position.y, player.position.z + 2);
-//    shape.rotation.set(
-//        Math.random() * Math.PI,
-//        Math.random() * Math.PI,
-//        Math.random() * Math.PI
-//    );
-//
-//    scene.add(shape);
-
-
-    var bumperGeo = new THREE.SphereGeometry( 0.25, 12, 12 );
+    var bumperGeo = new THREE.SphereGeometry( 0.25, 6, 6 );
 
     var bumperMat = Physijs.createMaterial(
         new THREE.MeshLambertMaterial( { color: 0xCCCCCC, shading: THREE.FlatShading } ),
         .8, // high friction
-        .4 // low restitution
+        //.4 // low restitution
+        Math.min(1, Math.max(.4, Math.random() * 1.5))
     );
 
     var bumper = new Physijs.SphereMesh(
         bumperGeo,
         bumperMat,
-        0.1,
-        { restitution: Math.random() * 1.5 }
+        1.1//,
+        //{ restitution: Math.random() * 1.5 }
     );
 
+    //console.log(bumper.material._physijs.restitution);
 //    bumper = new THREE.Mesh(bumperGeo, new THREE.MeshLambertMaterial( { color: 0xCCCCCC, shading: THREE.FlatShading } ));
 
     bumper.position.x = player.position.x;
@@ -1070,23 +1128,46 @@ function addBumpber() {
     bumper.position.z = player.position.z + 2;
 
     bumper.receiveShadow = true;
-    bumper.castShadow = true;
+    //bumper.castShadow = true;
     bumper.up.x = 0; bumper.up.y = 0; bumper.up.z = 1;
+
+
+
+
+    bumper.addEventListener( 'ready', function() {
+//        var force = bumper.position.clone().add(new THREE.Vector3(0, -200, 100 + (-chaseAngle) * 200)),
+//            rotation = player.rotation.clone();
+//
+//        force.applyEuler(rotation);
+//        bumper.position.applyEuler(rotation);
+//
+//        bumper.applyCentralForce(force);
+
+//        var origin = (new THREE.Vector3()).getPositionFromMatrix(camera.matrixWorld),
+//            target = player.position.clone(),
+//            direction = target.clone().sub(origin).multiply(new THREE.Vector3(1,50,25)),
+//            dest = bumper.position.clone().add(direction);
+
+        //rotation.x = -rotation.x;
+        //rotation.x = 0;
+        //bumper.rotation.z = rotation.z;
+        //console.log(rotation);
+
+        var force = new THREE.Vector3(0, -30 + (chaseAngle * 10), 10 + (-chaseAngle) * 10), //bumper.matrix.multiplyVector3(new THREE.Vector3(0,.0000001,.00000001 )),
+            rotation = player.rotation.clone();
+
+        force.applyEuler(rotation);
+//        bumper.position.applyEuler(rotation);
+//
+//        bumper.applyCentralForce(force);
+        bumper.applyCentralImpulse(force)
+    } );
 
 
     scene.add( bumper );
 
     bumper.updateMatrixWorld();
     bumper.updateMatrix();
-
-
-
-    var force = bumper.position.clone().add(new THREE.Vector3(0, -200, 50));
-    force.applyEuler(player.rotation);
-    bumper.applyCentralForce(force);
-
-
-
 
     drawPlayerLazer();
 
@@ -1099,15 +1180,68 @@ function addTree(x, y, z) {
         var c = intersectGroundObjs(x, y);
         //console.log(x,y,z);
         if (c.length > 0 && c[0].object != water) {
+
+            // Tree model
             var tree = new THREE.Mesh( treeGeo, treeMats );
             tree.castShadow = true;
-            tree.position = new THREE.Vector3(x, y, c[0].point.z);
-            tree.rotation.z = Math.random() * Math.PI;
+            var roationAmt = Math.random() * Math.PI;
 
-            scene.add(tree);
+            // Container and hit boxes
+            var treeContainerGeo = new THREE.CubeGeometry(1.25, 1.25, .25, 1, 1, 1 );
+            var treeBoxGeo = new THREE.CubeGeometry(.742, .742, 5, 1, 1, 1 );
+            var treeLeafBoxGeo = new THREE.CubeGeometry(1.38 * 2, 1.64 * 2, 1 * 2, 1, 1, 1 );
+
+            // Invisible hit boxes
+            var treeBoxMat = Physijs.createMaterial(
+                new THREE.MeshPhongMaterial( {
+                    color: 0x996633,
+                    transparent: true,
+                    opacity: 0
+                } ),
+                .8, // high friction
+                .4 // low restitution
+            );
+
+            var treeContainer = new Physijs.BoxMesh(
+                treeContainerGeo,
+                treeBoxMat,
+                0
+            );
+
+            var treeBox = new Physijs.BoxMesh(
+                treeBoxGeo,
+                treeBoxMat,
+                0
+            );
+
+            var treeLeafBox = new Physijs.BoxMesh(
+                treeLeafBoxGeo,
+                treeBoxMat,
+                0
+            );
+
+
+            treeContainer.position = new THREE.Vector3(x, y, c[0].point.z);
+            treeContainer.add(treeBox);
+            treeContainer.add(treeLeafBox);
+            treeContainer.add(tree);
+
+            treeContainer.rotation.z = roationAmt;
+            treeBox.rotation.y = 0.104719755;
+            treeLeafBox.rotation.z = -0.296705973;
+
+            treeBox.position.add(new THREE.Vector3(.25631, .16644, 5.49535 / 2 ));
+            treeLeafBox.position.add(new THREE.Vector3(-0.16796, -0.05714, 4.59859));
+
+            scene.add(treeContainer);
         }
     } else {
-        var tree = new THREE.Mesh( treeGeo, treeMats );
+        //var tree = new THREE.Mesh( treeGeo, treeMats );
+        var tree = new Physijs.BoxMesh(
+            treeGeo,
+            treeMats,
+            0 // mass is immobile
+        );
         tree.castShadow = true;
         tree.position = new THREE.Vector3(x, y, z);
         tree.rotation.z = Math.random() * Math.PI;
@@ -1223,52 +1357,56 @@ function waitRequired(key, timeout) {
     }
 }
 
-function updateChaseCamLocation() {
-    if (chaseCamEnabled) {
-        var relativeCameraOffset = new THREE.Vector3(0, 3 * chaseScale, 1 * chaseScale);
-        var cameraOffset = relativeCameraOffset.applyMatrix4(player.matrixWorld);
-        camera.position.x = cameraOffset.x;
-        camera.position.y = cameraOffset.y;
-        camera.position.z = cameraOffset.z;
-
-        // Test for ground collision
-        var minZ = intersectGround(camera.position.x, camera.position.y);
-        if (camera.position.z < minZ + 1) {
-            //console.log('bounce camera', camera.position.z, minZ + 1);
-            camera.position.z = minZ + 1;
-
-        }
-
-
-        var target = player.position.clone();
-        target.z += 2;
-        camera.position.z += 2;
-        camera.lookAt(target);
-        //console.log(camera.rotation);
-    }
-}
-
 function drawPlayerLazer() {
-    drawLazer(player);
+
+    var origin = (new THREE.Vector3()).getPositionFromMatrix(camera.matrixWorld),
+        target = player.position.clone(),
+        direction = target.clone().sub(origin),
+        dest = target.clone().add(direction);
+
+
+
+
+    //rotation.x = -rotation.x;
+
+    target.z += 1;
+    dest.z += 1;
+
+    //var direction = new origin.clone().sub(target),
+        //newTarget =
+
+
+    drawLine(target, dest);
 }
 
 function drawLazer(mesh) {
-    var lineMat = new THREE.LineBasicMaterial({ color: 0x0000ff }),
-        lineGeo = new THREE.Geometry();
 
     var origin = mesh.position.clone(),
         originMatrix = mesh.matrix;
 
-    origin.z += 1;
 
     var direction = new THREE.Vector3(0, -10, 0),
         target = direction.applyMatrix4(originMatrix);
 
-    lineGeo.vertices.push(origin);
-    lineGeo.vertices.push(target);
+    drawLine(origin, target);
+}
+
+function drawLine(v1, v2) {
+    var lineMat = new THREE.LineBasicMaterial({ color: 0x0000ff }),
+        lineGeo = new THREE.Geometry();
+
+    lineGeo.vertices.push(v1);
+    lineGeo.vertices.push(v2);
     var line = new THREE.Line(lineGeo, lineMat);
-    //console.log(line);
     scene.add(line);
+}
+
+function deleteBalls() {
+    for(var i in balls) {
+        scene.remove(balls[i]);
+        balls[i] = null;
+        delete balls[i];
+    }
 }
 
 // ***** RUN TIME ******************************************************************************************************
