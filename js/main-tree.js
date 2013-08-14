@@ -152,19 +152,20 @@ if ( havePointerLock ) {
 
 }
 
+var socket, playerId, players = {}, deadScreen;
 
 // ***** INIT TIME *****************************************************************************************************
 
 function init() {
 
-    //TWEEN.start();
 
     container = document.createElement( 'div' );
     document.body.appendChild( container );
 
 
 
- 
+
+
     // EVENTS
     
 
@@ -178,6 +179,7 @@ function init() {
     document.addEventListener( 'mousemove', onMouseMove, false );
 
     wrapperSelector = $('#pagewrapper');
+    deadScreen = $('#respawn');
     $('body').mousewheel( onMouseScroll ) ;
 //    $('body').mouseup( onMouseUp ) ;
 //    $('body').mousemove( onMouseMove );
@@ -279,46 +281,135 @@ function init() {
     moon.position.set(0, 0, 10 );
     moon.lookAt(0, 0, 0);
     lightRig.rotation.x = 0.6807; // middle of northern hemisphere ~39deg N latitude
-    
-    createScene();
 
-    // RENDERER
+    //
+    // SOCKET
+    //
 
-    renderer = new THREE.WebGLRenderer( { antialias: false } );
-    renderer.setClearColor( 0x000000, 1); // clearColor: 0x000000, clearAlpha: 1,
-    renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
-    container.appendChild( renderer.domElement );
-    
-    renderer.setClearColor( scene.fog.color, 1 );
-    renderer.autoClear = false;
-    
-    //    
-    renderer.shadowMapEnabled = true;
-    renderer.shadowMapSoft =  true;
-    
-    // STATS
+    socket = io.connect('http://'+window.location.hostname+':8080');
+    socket.on('connected', function(data) {
+        console.log('socket connected', data);
+        playerId = data.player.player_id;
+        console.log('I AM PLAYER ', playerId);
 
-    stats = new Stats();
-    stats.domElement.style.position = 'absolute';
-    stats.domElement.style.top = '0px';
-    stats.domElement.style.zIndex = 100;
-    container.appendChild( stats.domElement );
+        //socket.emit('subscribe', params);
 
-    physicsStats = new Stats();
-    physicsStats = new Stats();
-    physicsStats.domElement.style.position = 'absolute';
-    physicsStats.domElement.style.top = '50px';
-    physicsStats.domElement.style.zIndex = 100;
-    container.appendChild( physicsStats.domElement );
-    
-    
-    // TESTING CONTROLS
-    //controls = new THREE.TrackballControls(camera, renderer.domElement );
-    
+        socket.on('disconnect', function(data) {
+            console.error('lost connection to server');
+        });
+
+        createScene(data.ground, data.water, data.hills, data.trees, data.player.start_pos, data.players);
+
+        // RENDERER
+
+        renderer = new THREE.WebGLRenderer( { antialias: false } );
+        renderer.setClearColor( 0x000000, 1); // clearColor: 0x000000, clearAlpha: 1,
+        renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
+        container.appendChild( renderer.domElement );
+
+        renderer.setClearColor( scene.fog.color, 1 );
+        renderer.autoClear = false;
+
+        //
+        renderer.shadowMapEnabled = true;
+        renderer.shadowMapSoft =  true;
+
+        // STATS
+
+        stats = new Stats();
+        stats.domElement.style.position = 'absolute';
+        stats.domElement.style.top = '0px';
+        stats.domElement.style.zIndex = 100;
+        container.appendChild( stats.domElement );
+
+        physicsStats = new Stats();
+        physicsStats = new Stats();
+        physicsStats.domElement.style.position = 'absolute';
+        physicsStats.domElement.style.top = '50px';
+        physicsStats.domElement.style.zIndex = 100;
+        container.appendChild( physicsStats.domElement );
+
+
+        // TESTING CONTROLS
+        //controls = new THREE.TrackballControls(camera, renderer.domElement );
+
+    });
+
+    socket.on('moves', function (data) {
+        //console.log('socket move', data);
+        updatePlayer(data.id, data.position);
+    });
+
+    socket.on('fires', function (data) {
+        //console.log('socket fire', data);
+        addBall(new THREE.Vector3(data.position.x, data.position.y, data.position.z), new THREE.Vector3(data.force.x, data.force.y, data.force.z), data.restitution, data.sourcePlayerId);
+    });
+
+    socket.on('hits', function (data) {
+//        playerId: player.userData.id,
+//        playerSourceId: other_object.userData.playerSourceId,
+//        velocity: relative_velocity.length(),
+//        newHp: player.userData.hp
+        if (data.newHp < 0) {
+            // KILLED
+            console.log(' ** PLAYER ' + data.playerId + ' WAS KILLED BY PLAYER ' + data.playerSourceId + ' ***', data);
+            if (data.playerId == playerId) {
+                // THIS PLAYER IS NOW DEAD
+                player.userData.hp = data.newHp;
+                deadScreen.show();
+            } else {
+                players[data.playerId].userData.hp = data.newHp;
+            }
+        } else {
+            // STILL ALIVE
+            console.log(' ** PLAYER ' + data.playerId + ' WAS HIT BY PLAYER ' + data.playerSourceId + ' ***', data);
+            if (data.playerId == playerId) {
+                player.userData.hp = data.newHp;
+            } else {
+                players[data.playerId].userData.hp = data.newHp;
+            }
+        }
+    });
+
+    socket.on('respawns', function(data) {
+        console.log('player respawn', data);
+//        player_id: id,
+//        hp: players[id].hp,
+//        pos: respawnLoc
+        if (data.player_id == playerId) {
+            // SELF RESPAWN
+            player.userData.hp = data.hp;
+            player.position.x = data.pos.x;
+            player.position.y = data.pos.y;
+            player.rotation.z = 0;
+            lockPlayerZ();
+            player.__dirtyPosition = true;
+            player.__dirtyRotation = true;
+
+        } else {
+            players[data.player_id].userData.hp = data.hp;
+            updatePlayer(data.player_id, data.pos);
+        }
+    });
+
+    socket.on('new_player', function (data) {
+        console.log('player connected', data);
+        addPlayer(data.player_id, data.start_pos, data.pos);
+    });
+
+    socket.on('delete_player', function (data) {
+        console.log('player disconnected', data);
+        deletePlayer(data);
+    });
+
+
+
+
+
 
 }
 
-function createScene( ) {
+function createScene( groundData, waterData, hillsData, trees, startPos, playerList) {
 
     var size = 128,
         terrainSize = size * 2;
@@ -350,7 +441,8 @@ function createScene( ) {
     //var geometry = new THREE.PlaneGeometry( 64 * 2, 64 * 2 );
     //var water = new THREE.Mesh( geometry, planeMaterial );
 
-    water = createRandomPlane(terrainSize, terrainSize, planeMaterial, .1, 4);
+//    water = createRandomPlane(terrainSize, terrainSize, planeMaterial, .1, 4);
+    water = createPlaneFromData(waterData.data, waterData.worldWidth, waterData.worldHeight, waterData.width, waterData.height, planeMaterial, waterData.multiplier, waterData.subtractor );
 
 
     //water.position.set( 0, 0, 0 );
@@ -378,7 +470,8 @@ function createScene( ) {
         .4 // low restitution
     );
 
-    ground = createRandomPlane(terrainSize, terrainSize, groundPhysMaterial, .25, 6);
+//    ground = createRandomPlane(terrainSize, terrainSize, groundPhysMaterial, .25, 6);
+    ground = createPlaneFromData(groundData.data, groundData.worldWidth, groundData.worldHeight, groundData.width, groundData.height, groundPhysMaterial, groundData.multiplier, groundData.subtractor );
 
     scene.add( ground );
 
@@ -388,7 +481,9 @@ function createScene( ) {
         .4 // low restitution
     );
 
-    hills = createRandomPlane(terrainSize, terrainSize, hillsPhysMaterial, .75, 35);
+//    hills = createRandomPlane(terrainSize, terrainSize, hillsPhysMaterial, .75, 35);
+    hills = createPlaneFromData(hillsData.data, hillsData.worldWidth, hillsData.worldHeight, hillsData.width, hillsData.height, hillsPhysMaterial, hillsData.multiplier, hillsData.subtractor );
+
     //hills.position.z = -10
     scene.add( hills );
 
@@ -447,19 +542,20 @@ function createScene( ) {
         // `this` has collided with `other_object` with an impact speed of `relative_velocity` and a rotational force of `relative_rotation` and at normal `contact_normal`
         //console.log(other_object, relative_velocity);
         if (other_object.material.color.g < 0.5) {
-            console.log('ouch!', relative_velocity, relative_velocity.length(), player.userData.hp -= relative_velocity.length());
+            player.userData.hp -= relative_velocity.length();
+            console.log('ouch!', relative_velocity, relative_velocity.length(), player.userData.hp);
 
             scene.remove(other_object);
             other_object = null;
 
-            if (player.userData.hp < 0) {
-                player.position.set(0,0,0);
-                player.__dirtyPosition = true;
-                player.__dirtyRotation = true;
-                lockPlayerZ();
-                player.userData.hp = 100;
-                console.log(' *** DEAD *** ');
-            }
+//            if (player.userData.hp < 0) {
+//                player.position.set(startPos.x,startPos.y,0);
+//                player.__dirtyPosition = true;
+//                player.__dirtyRotation = true;
+//                lockPlayerZ();
+//                player.userData.hp = 100;
+//                console.log(' *** DEAD *** ');
+//            }
         }
     });
 
@@ -486,7 +582,20 @@ function createScene( ) {
 
     scene.add( player );
 
+    // Set x/y
+    player.position.x = startPos.x;
+    player.position.y = startPos.y;
+    lockPlayerZ();
+    broadcastPosition();
 
+
+    // Add current players
+    for (var i in playerList) {
+        var p = playerList[i];
+        if (p.player_id != playerId) {
+            addPlayer(p.player_id, p.start_pos, p.pos);
+        }
+    }
 
 
 
@@ -527,10 +636,13 @@ function createScene( ) {
 //        tree.castShadow = true;
 
         //scene.add(tree);
-        addTree(0, 0);
+        //addTree(0, 0);
 
         // Add a shit load of trees
-        for(var i = 0; i < 50; i++) { addTree(Math.random() * 256 - 128, Math.random() * 256 - 128); }
+        //for(var i = 0; i < 50; i++) { addTree(Math.random() * 256 - 128, Math.random() * 256 - 128); }
+        for(var i in trees) {
+            addTree(trees[i].x, trees[i].y, null, trees[i].rotation);
+        }
 
         //camera.lookAt(gameCameraTarget);
         requestAnimationFrame(render);
@@ -571,129 +683,138 @@ function animate(delta) {
         playerSpeed = isKeyDown(KEYCODE.SHIFT) ? speed * 2 : speed,
         playerAngleSpeed = Math.PI / 2 * angleSpeed;
 
-    if (isKeyDown(KEYCODE.W)) {
-        //player.position.y -= 0.10;
-        player.translateY(-playerSpeed);
-        player.__dirtyPosition = true;
-        player.__dirtyRotation = true;
-        lockPlayerZ();
-        playerMoved = true;
-    }
+        if (player.userData.hp > 0) {
 
-    if (isKeyDown(KEYCODE.S)) {
-        //player.position.y += 0.10;
-        player.translateY(playerSpeed);
-        player.__dirtyPosition = true;
-        player.__dirtyRotation = true;
-        lockPlayerZ();
-        playerMoved = true;
-    }
-
-    if (isKeyDown(KEYCODE.A)) {
-//        player.position.x += 0.10;
-        player.translateX(playerSpeed);
-        player.__dirtyPosition = true;
-        player.__dirtyRotation = true;
-        lockPlayerZ();
-        playerMoved = true;
-    }
-
-    if (isKeyDown(KEYCODE.D)) {
-        //player.position.x -= 0.10;
-
-        player.translateX(-playerSpeed);
-        player.__dirtyPosition = true;
-        player.__dirtyRotation = true;
-        lockPlayerZ();
-        playerMoved = true;
-    }
-
-    if (isKeyDown(KEYCODE.Z)) {
-        //player.position.x -= 0.10;
-
-        player.position.set(0,0,0);
-        player.__dirtyPosition = true;
-        player.__dirtyRotation = true;
-        lockPlayerZ();
-        playerMoved = true;
-    }
-
-    if (isKeyDown(KEYCODE.UP_ARROW)) {
-        //player.position.z += 0.10;
-        //player.translateZ(playerSpeed);
-        //playerMoved = true;
-    }
-
-    if (isKeyDown(KEYCODE.DOWN_ARROW)) {
-        //player.position.z -= 0.10;
-        //player.translateZ(-playerSpeed);
-        //playerMoved = true;
-    }
-
-    var rotation_matrix = new THREE.Matrix4().identity();
-    if (isKeyDown(KEYCODE.LEFT_ARROW)) {
-        //player.rotation.x -= Math.PI / 20;
-        player.rotateOnAxis( new THREE.Vector3(0,0,1), playerAngleSpeed);
-        player.__dirtyRotation = true;
-        player.__dirtyPosition = true;
-        //playerMoved = true;
-    }
-
-    if (isKeyDown(KEYCODE.RIGHT_ARROW)) {
-        //player.rotation.x += Math.PI / 20;
-        player.rotateOnAxis( new THREE.Vector3(0,0,1), -playerAngleSpeed);
-        player.__dirtyRotation = true;
-        player.__dirtyPosition = true;
-        //playerMoved = true;
-    }
-
-    if (isKeyDown(KEYCODE.SPACE)) {
-        if (!isWaitRequired(KEYCODE.SPACE)) {
-            waitRequired(KEYCODE.SPACE);
-            pauseRotation = !pauseRotation;
+        if (isKeyDown(KEYCODE.W)) {
+            //player.position.y -= 0.10;
+            player.translateY(-playerSpeed);
+            player.__dirtyPosition = true;
+            player.__dirtyRotation = true;
+            lockPlayerZ();
+            playerMoved = true;
         }
-    }
 
-    if (isKeyDown(KEYCODE.SHIFT) && isKeyDown(KEYCODE.SPACE)) {
-        lightRig.rotation.y -= 0.01;
-    }
+        if (isKeyDown(KEYCODE.S)) {
+            //player.position.y += 0.10;
+            player.translateY(playerSpeed);
+            player.__dirtyPosition = true;
+            player.__dirtyRotation = true;
+            lockPlayerZ();
+            playerMoved = true;
+        }
 
-    if (isKeyDown(KEYCODE.P)) {
-        //cameraPlaceholderHelper.visible = !cameraPlaceholderHelper.visible;
-        light.shadowCameraVisible = !light.shadowCameraVisible;
-    }
+        if (isKeyDown(KEYCODE.A)) {
+    //        player.position.x += 0.10;
+            player.translateX(playerSpeed);
+            player.__dirtyPosition = true;
+            player.__dirtyRotation = true;
+            lockPlayerZ();
+            playerMoved = true;
+        }
 
-    if (isKeyDown(KEYCODE.ENTER)) {
-        if (!isWaitRequired(KEYCODE.ENTER)) {
-            waitRequired(KEYCODE.ENTER);
-            chaseCamEnabled = !chaseCamEnabled;
-            if (!chaseCamEnabled) {
-                if (controls == null) {
-                    controls = new THREE.TrackballControls(camera, renderer.domElement );
-                    controls.handleResize();
-                } else {
-                    controls.enabled = true;
-                }
-            } else {
-                if (controls != null) {
-                    controls.enabled = false;
-                }
-                camera.up.x = 0;
-                camera.up.y = 0;
-                camera.up.z = 1;
+        if (isKeyDown(KEYCODE.D)) {
+            //player.position.x -= 0.10;
+
+            player.translateX(-playerSpeed);
+            player.__dirtyPosition = true;
+            player.__dirtyRotation = true;
+            lockPlayerZ();
+            playerMoved = true;
+        }
+
+        if (isKeyDown(KEYCODE.Z)) {
+            //player.position.x -= 0.10;
+
+            player.position.set(0,0,0);
+            player.__dirtyPosition = true;
+            player.__dirtyRotation = true;
+            lockPlayerZ();
+            playerMoved = true;
+        }
+
+        if (isKeyDown(KEYCODE.UP_ARROW)) {
+            //player.position.z += 0.10;
+            //player.translateZ(playerSpeed);
+            //playerMoved = true;
+        }
+
+        if (isKeyDown(KEYCODE.DOWN_ARROW)) {
+            //player.position.z -= 0.10;
+            //player.translateZ(-playerSpeed);
+    //        playerMoved = true;
+        }
+
+        var rotation_matrix = new THREE.Matrix4().identity();
+        if (isKeyDown(KEYCODE.LEFT_ARROW)) {
+            //player.rotation.x -= Math.PI / 20;
+            player.rotateOnAxis( new THREE.Vector3(0,0,1), playerAngleSpeed);
+            player.__dirtyRotation = true;
+            player.__dirtyPosition = true;
+            playerMoved = true;
+        }
+
+        if (isKeyDown(KEYCODE.RIGHT_ARROW)) {
+            //player.rotation.x += Math.PI / 20;
+            player.rotateOnAxis( new THREE.Vector3(0,0,1), -playerAngleSpeed);
+            player.__dirtyRotation = true;
+            player.__dirtyPosition = true;
+            playerMoved = true;
+        }
+
+        if (isKeyDown(KEYCODE.SPACE)) {
+            if (!isWaitRequired(KEYCODE.SPACE)) {
+                waitRequired(KEYCODE.SPACE);
+                pauseRotation = !pauseRotation;
             }
         }
-    }
 
-    if (isKeyDown(KEYCODE.L)) {
-        if (!isWaitRequired(KEYCODE.L)) {
-            drawPlayerLazer();
+        if (isKeyDown(KEYCODE.SHIFT) && isKeyDown(KEYCODE.SPACE)) {
+            lightRig.rotation.y -= 0.01;
         }
-    }
 
-    if (isKeyDown(KEYCODE.B)) {
-        if (!isWaitRequired(KEYCODE.B)) {
-            deleteBalls();
+        if (isKeyDown(KEYCODE.P)) {
+            //cameraPlaceholderHelper.visible = !cameraPlaceholderHelper.visible;
+            light.shadowCameraVisible = !light.shadowCameraVisible;
+        }
+
+        if (isKeyDown(KEYCODE.L)) {
+            if (!isWaitRequired(KEYCODE.L)) {
+                drawPlayerLazer();
+            }
+        }
+
+        if (isKeyDown(KEYCODE.B)) {
+            if (!isWaitRequired(KEYCODE.B)) {
+                deleteBalls();
+            }
+        }
+    } else {
+
+        if (isKeyDown(KEYCODE.ENTER)) {
+            if (!isWaitRequired(KEYCODE.ENTER)) {
+                waitRequired(KEYCODE.ENTER);
+    //            chaseCamEnabled = !chaseCamEnabled;
+    //            if (!chaseCamEnabled) {
+    //                if (controls == null) {
+    //                    controls = new THREE.TrackballControls(camera, renderer.domElement );
+    //                    controls.handleResize();
+    //                } else {
+    //                    controls.enabled = true;
+    //                }
+    //            } else {
+    //                if (controls != null) {
+    //                    controls.enabled = false;
+    //                }
+    //                camera.up.x = 0;
+    //                camera.up.y = 0;
+    //                camera.up.z = 1;
+    //            }
+
+                if (player.userData.hp < 0) {
+                    socket.emit('respawn');
+                    deadScreen.hide();
+                }
+            }
         }
     }
 
@@ -745,7 +866,9 @@ function animate(delta) {
 
     }
 
-
+    if (playerMoved) {
+        broadcastPosition();
+    }
 
     //render();
 }
@@ -1002,30 +1125,146 @@ function onMouseUp(event) {
     //console.log('down', event);
     event.preventDefault();
 
-    if (isKeyDown(KEYCODE.SHIFT)) {
-        addBumpber();
-    } else {
-
-        var mouse = {};
-        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-        var vector = new THREE.Vector3(mouse.x, mouse.y, 0.5);
-        projector.unprojectVector(vector, camera);
-        var raycaster = new THREE.Raycaster(camera.position, vector.sub(camera.position).normalize());
-
-        var intersects = raycaster.intersectObjects([ ground, hills ], true);
-
-        if (intersects.length > 0) {
-            addTree(intersects[0].point.x, intersects[0].point.y, intersects[0].point.z);
-        }
+    if (player.userData.hp > 0) {
+//        if (isKeyDown(KEYCODE.SHIFT)) {
+            addBumpber();
+//        } else {
+//
+//            var mouse = {};
+//            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+//            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+//
+//            var vector = new THREE.Vector3(mouse.x, mouse.y, 0.5);
+//            projector.unprojectVector(vector, camera);
+//            var raycaster = new THREE.Raycaster(camera.position, vector.sub(camera.position).normalize());
+//
+//            var intersects = raycaster.intersectObjects([ ground, hills ], true);
+//
+//            if (intersects.length > 0) {
+//                addTree(intersects[0].point.x, intersects[0].point.y, intersects[0].point.z);
+//            }
+//        }
     }
 }
 
 
 // ***** HELPERS *******************************************************************************************************
 
+function addPlayer(id, startPos, currentPos) {
+    var cubeMaterials = new THREE.MeshPhongMaterial( {
+            color: 0x996633,
+            ambient: 0x996633, // should generally match color
+            specular: 0x050505,
+            shininess: 100
+        } ) ;// new THREE.MeshPhongMaterial( { color: 0xeeeeee } );
 
+    var cubeGeo = new THREE.CubeGeometry( 1, 1, 2, 1, 1, 1 );
+
+    var playerPhysMaterials = Physijs.createMaterial(
+        cubeMaterials,
+        .8, // high friction
+        .4 // low restitution
+    );
+
+    var player = new Physijs.BoxMesh(
+        cubeGeo,
+        playerPhysMaterials,
+        0
+    );
+
+    player.userData.hp = 100.0;
+    player.userData.id = id;
+    player.userData.start_pos = startPos;
+
+    player.addEventListener( 'collision', function( other_object, relative_velocity, relative_rotation, contact_normal ) {
+        // `this` has collided with `other_object` with an impact speed of `relative_velocity` and a rotational force of `relative_rotation` and at normal `contact_normal`
+        // Only handle collisions for balls the local player fired
+        console.log('collision', other_object.userData.sourcePlayerId, other_object, relative_velocity)
+        if (other_object.material.color.g < 0.5 && other_object.userData.sourcePlayerId == playerId) {
+
+            // Update player HP
+            player.userData.hp -= relative_velocity.length();
+
+            console.log('ouch!', player, player.userData.id, relative_velocity, relative_velocity.length(), player.userData.hp);
+
+            // FIXME: this ball won't remove from other player's screens
+            //scene.remove(other_object);
+            //other_object = null;
+
+            if (player.userData.hp < 0) {
+//                player.position.set(player.userData.start_pos.x, player.userData.start_pos.y, 0);
+//                player.__dirtyPosition = true;
+//                player.__dirtyRotation = true;
+//                lockPlayerZ(player);
+//                player.userData.hp = 100;
+                console.log(' *** PLAYER ' + player.userData.id + ' WAS KILLED BY PLAYER '+ other_object.userData.sourcePlayerId +' *** ');
+            }
+
+            socket.emit('hit', {
+                playerId: player.userData.id,
+                playerSourceId: other_object.userData.sourcePlayerId,
+                velocity: relative_velocity.length(),
+                newHp: player.userData.hp
+            })
+        }
+    });
+
+
+
+//    player = new THREE.Mesh( cubeGeo, cubeMaterials);
+//    player = new THREE.Mesh( cubeGeo, playerPhysMaterials);
+    player.castShadow = true;
+    player.receiveShadow = true;
+
+    // Set x/y
+    player.position.x = currentPos.x;
+    player.position.y = currentPos.y;
+    if (currentPos.z == null) {
+        lockPlayerZ(player);
+    } else {
+        player.position.z = currentPos.z;
+    }
+
+    scene.add( player );
+
+    players[id] = player;
+}
+
+function updatePlayer(id, position) {
+    var p = players[id];
+    if (p != null) {
+        p.position.x = position.x;
+        p.position.y = position.y;
+        if (position.z != null) {
+            p.position.z = position.z;
+        } else {
+            lockPlayerZ(p);
+        }
+        if (p.zRotation != null) {
+            p.rotation.z = position.zRotation;
+        }
+        p.__dirtyPosition = true;
+        p.__dirtyRotation = true;
+    }
+}
+
+function deletePlayer(id) {
+    var p = players[id];
+    if (p != null) {
+        scene.remove(players[id]);
+        players[id] = null;
+        delete players[id];
+    }
+}
+
+function broadcastPosition() {
+    socket.emit('move', {
+        x: player.position.x,
+        y: player.position.y,
+        z: player.position.z,
+        zRotation: player.rotation.z
+    });
+}
 
 function updateChaseCamLocation() {
     if (chaseCamEnabled) {
@@ -1084,11 +1323,24 @@ function updateChaseCamLocation() {
 
 function createRandomPlane(x, y, material, multiplier, subtractor) {
     var data = generateHeight( worldWidth, worldDepth );
-    var terrainGeometry = new THREE.Plane3RandGeometry( x, y, worldWidth - 1, worldDepth - 1 );
-    //geometry.applyMatrix( new THREE.Matrix4().makeRotationX( - Math.PI / 2 ) );
+    data = Array.prototype.slice.call(data);
+    return createPlaneFromData(data, worldWidth, worldDepth, x, y, material, multiplier, subtractor);
+
+}
+
+function createPlaneFromData(data, worldWidth, worldDepth, width, height, material, multiplier, subtractor) {
+
+    //console.log(data, worldWidth, worldDepth, width, height,multiplier,subtractor);
+
+    var floatData = new Float32Array(data.length);
+    for (var i = 0; i < data.length; i++) {
+        floatData[i] = data[i];
+    }
+
+    var terrainGeometry = new THREE.Plane3RandGeometry( width, height, worldWidth - 1, worldDepth - 1 );
 
     for ( var i = 0, l = terrainGeometry.vertices.length; i < l; i ++ ) {
-        terrainGeometry.vertices[ i ].z = data[ i ] * multiplier - subtractor;
+        terrainGeometry.vertices[ i ].z = floatData[ i ] * multiplier - subtractor;
     }
 
     terrainGeometry.computeFaceNormals();
@@ -1102,15 +1354,13 @@ function createRandomPlane(x, y, material, multiplier, subtractor) {
     return t;
 }
 
-function addBumpber() {
-
+function addBall(position, force, restitution, playerId) {
     var bumperGeo = new THREE.SphereGeometry( 0.25, 6, 6 );
-
     var bumperMat = Physijs.createMaterial(
         new THREE.MeshLambertMaterial( { color: 0xCCCCCC, shading: THREE.FlatShading } ),
         .8, // high friction
         //.4 // low restitution
-        Math.min(1, Math.max(.4, Math.random() * 1.5))
+        restitution
     );
 
     var bumper = new Physijs.SphereMesh(
@@ -1120,62 +1370,105 @@ function addBumpber() {
         //{ restitution: Math.random() * 1.5 }
     );
 
-    //console.log(bumper.material._physijs.restitution);
-//    bumper = new THREE.Mesh(bumperGeo, new THREE.MeshLambertMaterial( { color: 0xCCCCCC, shading: THREE.FlatShading } ));
-
-    bumper.position.x = player.position.x;
-    bumper.position.y = player.position.y;
-    bumper.position.z = player.position.z + 2;
+    bumper.position.copy(position);
 
     bumper.receiveShadow = true;
     //bumper.castShadow = true;
     bumper.up.x = 0; bumper.up.y = 0; bumper.up.z = 1;
 
-
-
-
     bumper.addEventListener( 'ready', function() {
-//        var force = bumper.position.clone().add(new THREE.Vector3(0, -200, 100 + (-chaseAngle) * 200)),
-//            rotation = player.rotation.clone();
-//
-//        force.applyEuler(rotation);
-//        bumper.position.applyEuler(rotation);
-//
-//        bumper.applyCentralForce(force);
-
-//        var origin = (new THREE.Vector3()).getPositionFromMatrix(camera.matrixWorld),
-//            target = player.position.clone(),
-//            direction = target.clone().sub(origin).multiply(new THREE.Vector3(1,50,25)),
-//            dest = bumper.position.clone().add(direction);
-
-        //rotation.x = -rotation.x;
-        //rotation.x = 0;
-        //bumper.rotation.z = rotation.z;
-        //console.log(rotation);
-
-        var force = new THREE.Vector3(0, -30 + (chaseAngle * 10), 10 + (-chaseAngle) * 10), //bumper.matrix.multiplyVector3(new THREE.Vector3(0,.0000001,.00000001 )),
-            rotation = player.rotation.clone();
-
-        force.applyEuler(rotation);
-//        bumper.position.applyEuler(rotation);
-//
-//        bumper.applyCentralForce(force);
         bumper.applyCentralImpulse(force)
     } );
 
 
+    bumper.userData.sourcePlayerId = playerId;
     scene.add( bumper );
 
     bumper.updateMatrixWorld();
     bumper.updateMatrix();
 
-    drawPlayerLazer();
-
     balls.push(bumper);
+}
+
+function addBumpber() {
+
+    var position = player.position.clone(),
+     restitution = Math.min(1, Math.max(.4, Math.random() * 1.5));
+
+    position.z += 2;
+
+    var force = new THREE.Vector3(0, -30 + (chaseAngle * 10), 10 + (-chaseAngle) * 10), //bumper.matrix.multiplyVector3(new THREE.Vector3(0,.0000001,.00000001 )),
+        rotation = player.rotation.clone();
+
+    force.applyEuler(rotation);
+
+    var eventData = {
+        sourcePlayerId: playerId,
+        force: force,
+        position: position,
+        restitution: restitution
+    };
+
+    socket.emit('fire', eventData);
+
+    addBall(position, force, restitution, playerId);
+
+    return;
+
+//    var bumperMat = Physijs.createMaterial(
+//        new THREE.MeshLambertMaterial( { color: 0xCCCCCC, shading: THREE.FlatShading } ),
+//        .8, // high friction
+//        //.4 // low restitution
+//        restitution
+//    );
+//
+//    var bumper = new Physijs.SphereMesh(
+//        bumperGeo,
+//        bumperMat,
+//        1.1//,
+//        //{ restitution: Math.random() * 1.5 }
+//    );
+//
+//    bumper.position.x = player.position.x;
+//    bumper.position.y = player.position.y;
+//    bumper.position.z = player.position.z + 2;
+//
+//    bumper.receiveShadow = true;
+//    //bumper.castShadow = true;
+//    bumper.up.x = 0; bumper.up.y = 0; bumper.up.z = 1;
+//    bumper.userData.sourcePlayerId = playerId;
+//
+//
+//    var force = new THREE.Vector3(0, -30 + (chaseAngle * 10), 10 + (-chaseAngle) * 10), //bumper.matrix.multiplyVector3(new THREE.Vector3(0,.0000001,.00000001 )),
+//        rotation = player.rotation.clone();
+//
+//    force.applyEuler(rotation);
+//
+//    bumper.addEventListener( 'ready', function() {
+//        bumper.applyCentralImpulse(force)
+//    } );
+//
+//    var eventData = {
+//        sourcePlayerId: playerId,
+//        force: force,
+//        position: bumper.position,
+//        restitution: bumper.material
+//    };
+//
+//    socket.emit('fire', eventData);
+//
+//    scene.add( bumper );
+//
+//    bumper.updateMatrixWorld();
+//    bumper.updateMatrix();
+//
+//    drawPlayerLazer();
+//
+//    balls.push(bumper);
 
 }
 
-function addTree(x, y, z) {
+function addTree(x, y, z, rotation) {
     if (z == null) {
         var c = intersectGroundObjs(x, y);
         //console.log(x,y,z);
@@ -1184,7 +1477,7 @@ function addTree(x, y, z) {
             // Tree model
             var tree = new THREE.Mesh( treeGeo, treeMats );
             tree.castShadow = true;
-            var roationAmt = Math.random() * Math.PI;
+            var roationAmt = rotation != null ? rotation : Math.random() * Math.PI;
 
             // Container and hit boxes
             var treeContainerGeo = new THREE.CubeGeometry(1.25, 1.25, .25, 1, 1, 1 );
@@ -1244,7 +1537,7 @@ function addTree(x, y, z) {
         );
         tree.castShadow = true;
         tree.position = new THREE.Vector3(x, y, z);
-        tree.rotation.z = Math.random() * Math.PI;
+        tree.rotation.z = rotation != null ? rotation : Math.random() * Math.PI;
 
         scene.add(tree);
     }
@@ -1278,15 +1571,16 @@ function isKeyDown(args) {
 }   
 
 
-function lockPlayerZ() {
+function lockPlayerZ(specificPlayer) {
 
-    var z = intersectGround(player.position.x, player.position.y);
+    var p = specificPlayer || player;
+    var z = intersectGround(p.position.x, p.position.y);
     if (z != null) {
-        var diff = z - player.position.z + 1;
+        var diff = z - p.position.z + 1;
         //player.position.z += diff;
-        player.translateZ(diff);
-        player.__dirtyPosition = true;
-        player.__dirtyRotation = true;
+        p.translateZ(diff);
+        p.__dirtyPosition = true;
+        p.__dirtyRotation = true;
     }
 }
 
