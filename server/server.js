@@ -86,7 +86,8 @@ var playerIds = 0,
     hills =  generateTerrainPlaneData(worldWidth, worldDepth, terrainSize, terrainSize, .75, 35),
     water =  generateTerrainPlaneData(worldWidth, worldDepth, terrainSize, terrainSize, .1, 4),
     treeLocations = [],
-    players = {};
+    players = {},
+    colorPool = makeColorGradient(1.766, 2.966, 3.766, 38, 38, 38, 128, 115, 50);
 
 for(var i = 0; i < 50; i++) {
     treeLocations.push({ x: Math.random() * 256 - 128, y: Math.random() * 256 - 128, rotation: Math.random() * Math.PI });
@@ -96,11 +97,14 @@ for(var i = 0; i < 50; i++) {
 
 io.sockets.on('connection', function (socket) {
 
-    var id = playerIds++;
+    var id = ++playerIds;
     players[id] = {
         player_id: id,
+        nickname: 'Player '+id,
         hp: 100,
-        start_pos: {  x: Math.random() * 256 - 128, y: Math.random() * 256 - 128, zRotation: 0 }
+        color: colorPool[id % colorPool.length],
+        start_pos: {  x: Math.random() * 256 - 128, y: Math.random() * 256 - 128, zRotation: 0 },
+        balls: []
     };
     var playerData = players[id];
     playerData.pos = { x: playerData.start_pos.x, y: playerData.start_pos.y, z: null, zRotation: 0 };
@@ -108,9 +112,35 @@ io.sockets.on('connection', function (socket) {
     // Hopefully, when a client disconnects we can kill the redis used by it.
     socket.on('disconnect', function (reason) {
         console.log('disconnected', reason);
+
+        // Remove the player balls
+        var unfireData = [];
+        for(var i in players[id].balls) {
+            unfireData.push({
+                playerId: id,
+                ballId: i
+            });
+        }
+
+        if (unfireData.length > 0) {
+            socket.broadcast.emit("unfires", unfireData);
+        }
+
+        // Remove the player
         delete players[id];
         socket.broadcast.emit('delete_player', playerData.player_id);
         console.log('players are now', players);
+    });
+
+    socket.on('nickname', function(data){
+        console.log('nickname', data);
+        if (data.length > 3) {
+            players[id].nickname = data;
+            socket.broadcast.emit('nicknames', {
+                playerId: id,
+                nickname: data
+            });
+        }
     });
 
     socket.on('move', function (data) {
@@ -124,9 +154,24 @@ io.sockets.on('connection', function (socket) {
     socket.on('fire', function (data) {
         if (players[id].hp > 0) {
             console.log('fire', data);
+            data.color = players[id].color;
+            players[id].balls[data.ballId] = data;
             socket.broadcast.emit("fires", data);
         }
     });
+
+    socket.on('unfire', function(data) {
+        if (players[data.playerId].balls[data.ballId] != null) {
+            console.log('unfire', data);
+            delete players[data.playerId].balls[data.ballId];
+
+            socket.broadcast.emit("unfires", [{
+                playerId: data.playerId,
+                ballId: data.ballId
+            }]);
+        }
+    });
+
 
     socket.on('respawn', function (data) {
         // Allow if dead
@@ -140,6 +185,19 @@ io.sockets.on('connection', function (socket) {
                 hp: players[id].hp,
                 pos: respawnLoc
             };
+
+            // Remove the player balls
+            var unfireData = [];
+            for(var i in players[id].balls) {
+                unfireData.push({
+                    playerId: id,
+                    ballId: i
+                });
+            }
+
+            if (unfireData.length > 0) {
+                socket.broadcast.emit("unfires", unfireData);
+            }
 
             socket.emit('respawns', respawnInfo)
             socket.broadcast.emit('respawns', respawnInfo);
@@ -214,4 +272,52 @@ function Float32ArrayToArray(data) {
 //    }
 //    return newData;
     return Array.prototype.slice.call(data);
+}
+
+//function geRandomColor() {
+//    var letters = '0123456789ABCDEF'.split('');
+//    var color = '#';
+//    for (var i = 0; i < 6; i++ ) {
+//        color += letters[Math.round(Math.random() * 15)];
+//    }
+//    return color;
+//}
+//
+//function rainbow(numOfSteps, step) {
+//    // This function generates vibrant, "evenly spaced" colours (i.e. no clustering). This is ideal for creating easily distinguishable vibrant markers in Google Maps and other apps.
+//    // Adam Cole, 2011-Sept-14
+//    // HSV to RBG adapted from: http://mjijackson.com/2008/02/rgb-to-hsl-and-rgb-to-hsv-color-model-conversion-algorithms-in-javascript
+//    var r, g, b;
+//    var h = step / numOfSteps;
+//    var i = ~~(h * 6);
+//    var f = h * 6 - i;
+//    var q = 1 - f;
+//    switch(i % 6){
+//        case 0: r = 1, g = f, b = 0; break;
+//        case 1: r = q, g = 1, b = 0; break;
+//        case 2: r = 0, g = 1, b = f; break;
+//        case 3: r = 0, g = q, b = 1; break;
+//        case 4: r = f, g = 0, b = 1; break;
+//        case 5: r = 1, g = 0, b = q; break;
+//    }
+//    var c = "#" + ("00" + (~ ~(r * 255)).toString(16)).slice(-2) + ("00" + (~ ~(g * 255)).toString(16)).slice(-2) + ("00" + (~ ~(b * 255)).toString(16)).slice(-2);
+//    return (c);
+//}
+
+function makeColorGradient(frequency1, frequency2, frequency3, phase1, phase2, phase3, center, width, len)
+{
+    var pool = [];
+    if (len == undefined)      len = 50;
+    if (center == undefined)   center = 128;
+    if (width == undefined)    width = 127;
+
+    for (var i = 0; i < len; ++i)
+    {
+        var red = Math.sin(frequency1*i + phase1) * width + center;
+        var grn = Math.sin(frequency2*i + phase2) * width + center;
+        var blu = Math.sin(frequency3*i + phase3) * width + center;
+        pool.push((Math.floor(red)* 256 * 256) + (Math.floor(grn) * 256) + Math.floor(blu));
+    }
+
+    return pool;
 }

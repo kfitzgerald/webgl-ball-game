@@ -145,7 +145,8 @@ body {
 #info a { color: #f00; font-weight: bold; text-decoration: underline; cursor: pointer }
 
 #blocker,
-#respawn {
+#respawn,
+#loading {
 
     position: absolute;
 
@@ -159,6 +160,7 @@ body {
 
 
 #instructions,
+#loading > div,
 #respawn > div {
 
     width: 100%;
@@ -191,9 +193,70 @@ body {
 #respawn {
     z-index: 5;
     display: none;
+    background-color: rgba(75,0,0,0.5);
 }
 
+#loading {
+    background-color: #333;
+    z-index: 100;
+}
 
+#loading label {
+    font-size: 25px;
+}
+
+#loading .wrap {
+    display: inline-block;
+    white-space: nowrap;
+    width: 521px;
+}
+
+#loading .error {
+    color: #f00;
+    display: none;
+}
+
+#loading input {
+    width: 230px;
+    font-size: 40px;
+    background-color: #fff;
+    border: solid 1px #ccc;
+    border-radius: 5px;
+    line-height: 60px;
+    padding: 0;
+    margin-right: 5px;
+    margin-top: 7px;
+}
+
+#loading button {
+    height: 65px;
+    border: solid 3px #999;
+    background-color: #ccc;
+    border-radius: 10px;
+    font-weight: bold;
+    line-height: 71px;
+    font-size: 23px;
+    padding: 0 10px;
+}
+
+#hud-ammo {
+    position: absolute;
+    display: block;
+    bottom: 0;
+    left: 0;
+    color: #fff;
+    background-color: rgba(100, 100, 100, 0.5);
+    height: 60px;
+    padding: 0 10px 8px;
+}
+
+#hud-ammo .current {
+    font-size: 50px;
+}
+
+#hud-ammo .max {
+    font-size: 25px;
+}
 
 
 

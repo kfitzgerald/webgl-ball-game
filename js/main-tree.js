@@ -36,7 +36,9 @@ var clock = new THREE.Clock();
 
 var keys = []; // array for storing which keys are up/down
 
-var balls = [];
+var balls = {}, ballCounter = 0, currentBallCount = 0, maxBallCount = 10;
+
+var hud = {};
 
 var chaseCamEnabled = true;
 var chaseScale = 2.5;
@@ -54,6 +56,7 @@ var mouse = {
     yDiff: null
 };
 
+var socket, playerId, players = {}, deadScreen, nickname;
 
 // ***** POINTER LOCK **************************************************************************************************
 
@@ -152,8 +155,6 @@ if ( havePointerLock ) {
 
 }
 
-var socket, playerId, players = {}, deadScreen;
-
 // ***** INIT TIME *****************************************************************************************************
 
 function init() {
@@ -181,6 +182,30 @@ function init() {
     wrapperSelector = $('#pagewrapper');
     deadScreen = $('#respawn');
     $('body').mousewheel( onMouseScroll ) ;
+    hud.currentBallCount = $('#hud-ammo .current');
+    hud.maxBallCount = $('#hud-ammo .max');
+
+    $(document).ready(function(){
+
+        $('#loading form').bind('submit', function(e) {
+            e.preventDefault();
+            var nick = $.trim($('#nickname').val());
+            if (nick.match(/^[a-zA-Z0-9_]{3,15}$/)) {
+                $('#loading button').unbind('click');
+                nickname = nick;
+                connect(nickname);
+                $('#loading .error').hide();
+                $('#loading').hide();
+            } else {
+                $('#loading .error').show().html('<br/>Name must be 3-10 letters or numbers.')
+            }
+        })
+
+    });
+
+    hud.currentBallCount.text(maxBallCount - currentBallCount);
+    hud.maxBallCount.text(maxBallCount);
+
 //    $('body').mouseup( onMouseUp ) ;
 //    $('body').mousemove( onMouseMove );
     
@@ -282,6 +307,10 @@ function init() {
     moon.lookAt(0, 0, 0);
     lightRig.rotation.x = 0.6807; // middle of northern hemisphere ~39deg N latitude
 
+
+}
+
+function connect(nickname) {
     //
     // SOCKET
     //
@@ -290,7 +319,7 @@ function init() {
     socket.on('connected', function(data) {
         console.log('socket connected', data);
         playerId = data.player.player_id;
-        console.log('I AM PLAYER ', playerId);
+        console.log('I AM PLAYER ', playerId, nickname);
 
         //socket.emit('subscribe', params);
 
@@ -298,7 +327,9 @@ function init() {
             console.error('lost connection to server');
         });
 
-        createScene(data.ground, data.water, data.hills, data.trees, data.player.start_pos, data.players);
+        socket.emit('nickname', nickname);
+
+        createScene(data);
 
         // RENDERER
 
@@ -335,6 +366,12 @@ function init() {
 
     });
 
+    socket.on('nicknames', function(data){
+        console.log("player", data.playerId, "is now known as", data.nickname);
+        players[data.playerId].userData.nickname = data.nickname;
+        updatePlayerSprite(data.playerId);
+    });
+
     socket.on('moves', function (data) {
         //console.log('socket move', data);
         updatePlayer(data.id, data.position);
@@ -342,7 +379,20 @@ function init() {
 
     socket.on('fires', function (data) {
         //console.log('socket fire', data);
-        addBall(new THREE.Vector3(data.position.x, data.position.y, data.position.z), new THREE.Vector3(data.force.x, data.force.y, data.force.z), data.restitution, data.sourcePlayerId);
+        addBall(
+            new THREE.Vector3(data.position.x, data.position.y, data.position.z),
+            new THREE.Vector3(data.force.x, data.force.y, data.force.z),
+            data.restitution,
+            data.sourcePlayerId,
+            data.color,
+            data.ballId);
+    });
+
+    socket.on('unfires', function(data){
+        //console.log('unfires', data);
+        for (var i in data) {
+            deleteBallById(data[i].playerId, data[i].ballId);
+        }
     });
 
     socket.on('hits', function (data) {
@@ -369,6 +419,7 @@ function init() {
                 players[data.playerId].userData.hp = data.newHp;
             }
         }
+        updatePlayerSprite(data.playerId);
     });
 
     socket.on('respawns', function(data) {
@@ -378,6 +429,7 @@ function init() {
 //        pos: respawnLoc
         if (data.player_id == playerId) {
             // SELF RESPAWN
+            deletePlayerBalls(playerId);
             player.userData.hp = data.hp;
             player.position.x = data.pos.x;
             player.position.y = data.pos.y;
@@ -390,26 +442,29 @@ function init() {
             players[data.player_id].userData.hp = data.hp;
             updatePlayer(data.player_id, data.pos);
         }
+        updatePlayerSprite(data.player_id);
     });
 
     socket.on('new_player', function (data) {
         console.log('player connected', data);
-        addPlayer(data.player_id, data.start_pos, data.pos);
+        addPlayer(data);
     });
 
     socket.on('delete_player', function (data) {
         console.log('player disconnected', data);
         deletePlayer(data);
     });
-
-
-
-
-
-
 }
 
-function createScene( groundData, waterData, hillsData, trees, startPos, playerList) {
+function createScene(data) {
+
+    var groundData = data.ground,
+        waterData = data.water,
+        hillsData = data.hills,
+        trees = data.trees,
+        startPos = data.player.start_pos,
+        playerList = data.players,
+        playerColor = data.player.color;
 
     var size = 128,
         terrainSize = size * 2;
@@ -515,8 +570,8 @@ function createScene( groundData, waterData, hillsData, trees, startPos, playerL
 
     if (FLATSHADING) {
         cubeMaterials = new THREE.MeshPhongMaterial( {
-            color: 0x996633,
-            ambient: 0x996633, // should generally match color
+            color: playerColor,
+            ambient: playerColor, // should generally match color
             specular: 0x050505,
             shininess: 100
         } ) ;// new THREE.MeshPhongMaterial( { color: 0xeeeeee } );
@@ -536,26 +591,35 @@ function createScene( groundData, waterData, hillsData, trees, startPos, playerL
         0
     );
 
+    player.userData.id = data.player.player_id
+    player.userData.nickname = nickname;
     player.userData.hp = 100.0;
 
+    // DETECT COLLISIONS WITH OWN BALLS
     player.addEventListener( 'collision', function( other_object, relative_velocity, relative_rotation, contact_normal ) {
         // `this` has collided with `other_object` with an impact speed of `relative_velocity` and a rotational force of `relative_rotation` and at normal `contact_normal`
-        //console.log(other_object, relative_velocity);
-        if (other_object.material.color.g < 0.5) {
-            player.userData.hp -= relative_velocity.length();
-            console.log('ouch!', relative_velocity, relative_velocity.length(), player.userData.hp);
+        //console.log('self collision with ball sourced from player id:', other_object.userData.sourcePlayerId, 'velocity:', relative_velocity.length(), other_object.userData.sourcePlayerId != playerId ? 'IGNORING' : 'HANDLING');
+        if (other_object.userData.sourcePlayerId == playerId) {
 
-            scene.remove(other_object);
-            other_object = null;
+            // Update player HP
 
-//            if (player.userData.hp < 0) {
-//                player.position.set(startPos.x,startPos.y,0);
-//                player.__dirtyPosition = true;
-//                player.__dirtyRotation = true;
-//                lockPlayerZ();
-//                player.userData.hp = 100;
-//                console.log(' *** DEAD *** ');
-//            }
+            // FIXME: this ball won't remove from other player's screens
+            socket.emit('unfire', {
+                playerId: playerId,
+                ballId: other_object.userData.ballId
+            });
+
+            deleteBallById(other_object.userData.sourcePlayerId, other_object.userData.ballId);
+
+            currentBallCount--;
+            hud.currentBallCount.text(maxBallCount - currentBallCount);
+
+//            socket.emit('hit', {
+//                playerId: player.userData.id,
+//                playerSourceId: other_object.userData.sourcePlayerId,
+//                velocity: relative_velocity.length(),
+//                newHp: player.userData.hp
+//            })
         }
     });
 
@@ -582,6 +646,8 @@ function createScene( groundData, waterData, hillsData, trees, startPos, playerL
 
     scene.add( player );
 
+    updatePlayerSprite(playerId);
+
     // Set x/y
     player.position.x = startPos.x;
     player.position.y = startPos.y;
@@ -593,7 +659,7 @@ function createScene( groundData, waterData, hillsData, trees, startPos, playerL
     for (var i in playerList) {
         var p = playerList[i];
         if (p.player_id != playerId) {
-            addPlayer(p.player_id, p.start_pos, p.pos);
+            addPlayer(p);
         }
     }
 
@@ -646,6 +712,7 @@ function createScene( groundData, waterData, hillsData, trees, startPos, playerL
 
         //camera.lookAt(gameCameraTarget);
         requestAnimationFrame(render);
+        setInterval(ballWatcher, 500);
 
         lockPlayerZ();
     } );
@@ -656,6 +723,24 @@ function createScene( groundData, waterData, hillsData, trees, startPos, playerL
 }
 
 // ***** RENDER TIME ***************************************************************************************************
+
+function ballWatcher() {
+    for(var i in balls) {
+        if (balls[i].userData.sourcePlayerId == playerId &&
+            balls[i].position.z < -50) {
+
+            socket.emit('unfire', {
+                playerId: playerId,
+                ballId: balls[i].userData.ballId
+            });
+
+            deleteBallById(balls[i].userData.sourcePlayerId, balls[i].userData.ballId);
+
+            currentBallCount--;
+            hud.currentBallCount.text(maxBallCount - currentBallCount);
+        }
+    }
+}
 
 function render() {
     var delta = clock.getDelta();
@@ -685,41 +770,20 @@ function animate(delta) {
 
         if (player.userData.hp > 0) {
 
-        if (isKeyDown(KEYCODE.W)) {
-            //player.position.y -= 0.10;
-            player.translateY(-playerSpeed);
-            player.__dirtyPosition = true;
-            player.__dirtyRotation = true;
-            lockPlayerZ();
-            playerMoved = true;
+        if (isKeyDown(KEYCODE.W) && !isKeyDown(KEYCODE.S)) {
+            playerMoved = moveIfInBounds(0, -playerSpeed) || playerMoved;
         }
 
-        if (isKeyDown(KEYCODE.S)) {
-            //player.position.y += 0.10;
-            player.translateY(playerSpeed);
-            player.__dirtyPosition = true;
-            player.__dirtyRotation = true;
-            lockPlayerZ();
-            playerMoved = true;
+        if (isKeyDown(KEYCODE.S) && !isKeyDown(KEYCODE.W)) {
+            playerMoved = moveIfInBounds(0, playerSpeed) || playerMoved;
         }
 
-        if (isKeyDown(KEYCODE.A)) {
-    //        player.position.x += 0.10;
-            player.translateX(playerSpeed);
-            player.__dirtyPosition = true;
-            player.__dirtyRotation = true;
-            lockPlayerZ();
-            playerMoved = true;
+        if (isKeyDown(KEYCODE.A) && !isKeyDown(KEYCODE.D)) {
+            playerMoved = moveIfInBounds(playerSpeed, 0) || playerMoved;
         }
 
-        if (isKeyDown(KEYCODE.D)) {
-            //player.position.x -= 0.10;
-
-            player.translateX(-playerSpeed);
-            player.__dirtyPosition = true;
-            player.__dirtyRotation = true;
-            lockPlayerZ();
-            playerMoved = true;
+        if (isKeyDown(KEYCODE.D) && !isKeyDown(KEYCODE.A)) {
+            playerMoved = moveIfInBounds(-playerSpeed, 0) || playerMoved;
         }
 
         if (isKeyDown(KEYCODE.Z)) {
@@ -732,20 +796,20 @@ function animate(delta) {
             playerMoved = true;
         }
 
-        if (isKeyDown(KEYCODE.UP_ARROW)) {
-            //player.position.z += 0.10;
-            //player.translateZ(playerSpeed);
-            //playerMoved = true;
-        }
-
-        if (isKeyDown(KEYCODE.DOWN_ARROW)) {
-            //player.position.z -= 0.10;
-            //player.translateZ(-playerSpeed);
-    //        playerMoved = true;
-        }
+//        if (isKeyDown(KEYCODE.UP_ARROW)) {
+//            //player.position.z += 0.10;
+//            //player.translateZ(playerSpeed);
+//            //playerMoved = true;
+//        }
+//
+//        if (isKeyDown(KEYCODE.DOWN_ARROW)) {
+//            //player.position.z -= 0.10;
+//            //player.translateZ(-playerSpeed);
+//    //        playerMoved = true;
+//        }
 
         var rotation_matrix = new THREE.Matrix4().identity();
-        if (isKeyDown(KEYCODE.LEFT_ARROW)) {
+        if (isKeyDown(KEYCODE.LEFT_ARROW) && !isKeyDown(KEYCODE.RIGHT_ARROW)) {
             //player.rotation.x -= Math.PI / 20;
             player.rotateOnAxis( new THREE.Vector3(0,0,1), playerAngleSpeed);
             player.__dirtyRotation = true;
@@ -753,7 +817,7 @@ function animate(delta) {
             playerMoved = true;
         }
 
-        if (isKeyDown(KEYCODE.RIGHT_ARROW)) {
+        if (isKeyDown(KEYCODE.RIGHT_ARROW) && !isKeyDown(KEYCODE.LEFT_ARROW)) {
             //player.rotation.x += Math.PI / 20;
             player.rotateOnAxis( new THREE.Vector3(0,0,1), -playerAngleSpeed);
             player.__dirtyRotation = true;
@@ -783,11 +847,11 @@ function animate(delta) {
             }
         }
 
-        if (isKeyDown(KEYCODE.B)) {
-            if (!isWaitRequired(KEYCODE.B)) {
-                deleteBalls();
-            }
-        }
+//        if (isKeyDown(KEYCODE.B)) {
+//            if (!isWaitRequired(KEYCODE.B)) {
+//                deleteBalls();
+//            }
+//        }
     } else {
 
         if (isKeyDown(KEYCODE.ENTER)) {
@@ -847,26 +911,27 @@ function animate(delta) {
     }
 
     // Color balls based on speed
-    for(var i in balls) {
-        if (balls[i] == null) {
-            delete balls[i];
-            continue;
-        } else if (balls[i].position.z < -50) {
-            scene.remove(balls[i]);
-            balls[i] = null;
-            delete balls[i];
-            continue;
-        }
-
-        var r = Math.max(0, Math.min(balls[i].getLinearVelocity().length()/10, 1.0)),
-            mod = 1.0 - (r);
-        balls[i].material.color.r = 1;
-        balls[i].material.color.g = mod;
-        balls[i].material.color.b = mod;
-
-    }
+//    for(var i in balls) {
+//        if (balls[i] == null) {
+//            delete balls[i];
+//            continue;
+//        } else if (balls[i].position.z < -50) {
+//            scene.remove(balls[i]);
+//            balls[i] = null;
+//            delete balls[i];
+//            continue;
+//        }
+//
+//        var r = Math.max(0, Math.min(balls[i].getLinearVelocity().length()/10, 1.0)),
+//            mod = 1.0 - (r);
+//        balls[i].material.color.r = 1;
+//        balls[i].material.color.g = mod;
+//        balls[i].material.color.b = mod;
+//
+//    }
 
     if (playerMoved) {
+        lockPlayerZ();
         broadcastPosition();
     }
 
@@ -1150,10 +1215,16 @@ function onMouseUp(event) {
 
 // ***** HELPERS *******************************************************************************************************
 
-function addPlayer(id, startPos, currentPos) {
+function addPlayer(data) {
+    var id = data.player_id,
+        startPos = data.start_pos,
+        currentPos = data.pos,
+        color = data.color,
+        nickname = data.nickname;
+
     var cubeMaterials = new THREE.MeshPhongMaterial( {
-            color: 0x996633,
-            ambient: 0x996633, // should generally match color
+            color: color,
+            ambient: color, // should generally match color
             specular: 0x050505,
             shininess: 100
         } ) ;// new THREE.MeshPhongMaterial( { color: 0xeeeeee } );
@@ -1172,24 +1243,23 @@ function addPlayer(id, startPos, currentPos) {
         0
     );
 
-    player.userData.hp = 100.0;
+    player.userData.hp = data.hp;
     player.userData.id = id;
     player.userData.start_pos = startPos;
+    player.userData.nickname = nickname;
 
     player.addEventListener( 'collision', function( other_object, relative_velocity, relative_rotation, contact_normal ) {
         // `this` has collided with `other_object` with an impact speed of `relative_velocity` and a rotational force of `relative_rotation` and at normal `contact_normal`
         // Only handle collisions for balls the local player fired
-        console.log('collision', other_object.userData.sourcePlayerId, other_object, relative_velocity)
-        if (other_object.material.color.g < 0.5 && other_object.userData.sourcePlayerId == playerId) {
+        //console.log('remote player collision with ball sourced from player id:', other_object.userData.sourcePlayerId, 'velocity:', relative_velocity.length(), other_object.userData.sourcePlayerId == playerId ? 'HANDLING' : 'IGNORING');
+        if (other_object.userData.sourcePlayerId == playerId) {
 
             // Update player HP
             player.userData.hp -= relative_velocity.length();
 
-            console.log('ouch!', player, player.userData.id, relative_velocity, relative_velocity.length(), player.userData.hp);
+            //console.log('ouch!', player, player.userData.id, relative_velocity, relative_velocity.length(), player.userData.hp);
 
             // FIXME: this ball won't remove from other player's screens
-            //scene.remove(other_object);
-            //other_object = null;
 
             if (player.userData.hp < 0) {
 //                player.position.set(player.userData.start_pos.x, player.userData.start_pos.y, 0);
@@ -1197,7 +1267,7 @@ function addPlayer(id, startPos, currentPos) {
 //                player.__dirtyRotation = true;
 //                lockPlayerZ(player);
 //                player.userData.hp = 100;
-                console.log(' *** PLAYER ' + player.userData.id + ' WAS KILLED BY PLAYER '+ other_object.userData.sourcePlayerId +' *** ');
+                //console.log(' *** PLAYER ' + player.userData.id + ' ('+player.userData.nickname+') WAS KILLED BY PLAYER '+ other_object.userData.sourcePlayerId + ' *** ');
             }
 
             socket.emit('hit', {
@@ -1205,7 +1275,20 @@ function addPlayer(id, startPos, currentPos) {
                 playerSourceId: other_object.userData.sourcePlayerId,
                 velocity: relative_velocity.length(),
                 newHp: player.userData.hp
-            })
+            });
+
+            socket.emit('unfire', {
+                playerId: playerId,
+                ballId: other_object.userData.ballId
+            });
+
+            deleteBallById(other_object.userData.sourcePlayerId, other_object.userData.ballId);
+
+            currentBallCount--;
+            hud.currentBallCount.text(maxBallCount - currentBallCount);
+
+            updatePlayerSprite(player.userData.id);
+
         }
     });
 
@@ -1228,6 +1311,9 @@ function addPlayer(id, startPos, currentPos) {
     scene.add( player );
 
     players[id] = player;
+
+    updatePlayerSprite(id);
+
 }
 
 function updatePlayer(id, position) {
@@ -1240,7 +1326,7 @@ function updatePlayer(id, position) {
         } else {
             lockPlayerZ(p);
         }
-        if (p.zRotation != null) {
+        if (position.zRotation != null) {
             p.rotation.z = position.zRotation;
         }
         p.__dirtyPosition = true;
@@ -1354,10 +1440,10 @@ function createPlaneFromData(data, worldWidth, worldDepth, width, height, materi
     return t;
 }
 
-function addBall(position, force, restitution, playerId) {
+function addBall(position, force, restitution, playerId, color, ballId) {
     var bumperGeo = new THREE.SphereGeometry( 0.25, 6, 6 );
     var bumperMat = Physijs.createMaterial(
-        new THREE.MeshLambertMaterial( { color: 0xCCCCCC, shading: THREE.FlatShading } ),
+        new THREE.MeshLambertMaterial( { color: color, shading: THREE.FlatShading } ),
         .8, // high friction
         //.4 // low restitution
         restitution
@@ -1382,15 +1468,24 @@ function addBall(position, force, restitution, playerId) {
 
 
     bumper.userData.sourcePlayerId = playerId;
+    bumper.userData.ballId = ballId;
     scene.add( bumper );
 
     bumper.updateMatrixWorld();
     bumper.updateMatrix();
 
-    balls.push(bumper);
+    //balls.push(bumper);
+    balls['p'+playerId+'b'+ballId] = bumper;
 }
 
 function addBumpber() {
+
+    if (currentBallCount >= maxBallCount) {
+        return;
+    }
+
+    currentBallCount++;
+    hud.currentBallCount.text(maxBallCount - currentBallCount);
 
     var position = player.position.clone(),
      restitution = Math.min(1, Math.max(.4, Math.random() * 1.5));
@@ -1406,12 +1501,19 @@ function addBumpber() {
         sourcePlayerId: playerId,
         force: force,
         position: position,
-        restitution: restitution
+        restitution: restitution,
+        ballId: ++ballCounter
     };
 
     socket.emit('fire', eventData);
 
-    addBall(position, force, restitution, playerId);
+    addBall(
+        position,
+        force,
+        restitution,
+        playerId,
+        player.material.color,
+        eventData.ballId);
 
     return;
 
@@ -1701,6 +1803,135 @@ function deleteBalls() {
         balls[i] = null;
         delete balls[i];
     }
+}
+
+function deleteBallById(playerId, ballId) {
+    var key = 'p'+playerId+'b'+ballId;
+    if (balls[key] != null) {
+        scene.remove(balls[key]);
+        balls[key] = null;
+        delete balls[key];
+    }
+}
+
+function deletePlayerBalls(targetPlayerId) {
+    var keyPrefix = 'p'+targetPlayerId+'b';
+    for(var i in balls) {
+        if (i.substr(0, keyPrefix.length) == keyPrefix) {
+            scene.remove(balls[i]);
+            balls[i] = null;
+            delete balls[i];
+            if (playerId == targetPlayerId) {
+                currentBallCount--;
+            }
+        }
+    }
+    hud.currentBallCount.text(maxBallCount - currentBallCount);
+}
+
+function makeTextSprite( nickname, hp ) {
+
+    var canvas = document.createElement('canvas');
+    var size = 512,
+        hpSize = 100,
+        hpOffset = 20,
+        hpWidth = Math.max(0, Math.round(hp)),
+        hpHeight = 10,
+        fontSize = 24,
+        paddingHeight = 10,
+        paddingWidth = 10;
+    canvas.width = size;
+    canvas.height = size;
+    var context = canvas.getContext('2d');
+
+    context.textAlign = 'center';
+    context.font = fontSize+'px Arial';
+    context.fillStyle = "rgba(50, 50, 50, 0.25)"; // CHANGED
+    var textWidth = context.measureText(nickname).width;
+    context.fillRect(
+        size/2 - textWidth/2 - paddingWidth,
+        size/2 - (fontSize*1.6) / 2 - paddingHeight,
+        textWidth + paddingWidth*2,
+        fontSize + paddingHeight*2
+    );
+
+    context.fillStyle = '#ffffff'; // CHANGED
+    context.fillText(nickname, size / 2, size / 2);
+
+    // hp bars
+    context.fillStyle = "rgba(204, 31, 31, 1)"; // CHANGED
+    context.fillRect(
+        size/2 - hpSize/2,
+        size/2 - hpHeight/2 + hpOffset,
+        hpSize,
+        hpHeight
+    );
+
+    context.fillStyle = "rgba(16, 189, 0, 1)"; // CHANGED
+    context.fillRect(
+        size/2 - hpSize/2,
+        size/2 - hpHeight/2 + hpOffset,
+        hpWidth,
+        hpHeight
+    );
+
+
+    var amap = new THREE.Texture(canvas);
+    amap.needsUpdate = true;
+
+    var mat = new THREE.SpriteMaterial({
+        map: amap,
+        transparent: false,
+        useScreenCoordinates: false,
+        color: 0xffffff // CHANGED
+    });
+
+    var sp = new THREE.Sprite(mat);
+    sp.scale.set( 10, 10, 1 ); // CHANGED
+    return sp;
+}
+
+function updatePlayerSprite(id) {
+    var p = id == playerId ? player : players[id];
+    if (p != null) {
+
+        // Remove the old one
+        if (p.userData.sprite != null) {
+            p.remove(p.userData.sprite);
+        }
+
+        // Add the new one
+        p.userData.sprite = makeTextSprite(p.userData.nickname, p.userData.hp );
+        p.userData.sprite.position.set(0, 0, 2);
+        p.add( p.userData.sprite );
+
+    } else {
+        console.error('cannot update sprite cuz player is missing?');
+    }
+}
+
+function isBetween(n, min, max) {
+    return (min < n) && (n < max);
+}
+
+function moveIfInBounds(xTranslation, yTranslation) {
+    var oldPos = player.position.clone(),
+        width = worldWidth * 2,
+        depth = worldDepth * 2;
+
+    player.translateX(xTranslation);
+    player.translateY(yTranslation);
+
+    if (!isBetween(player.position.x, -width, width) ||
+        !isBetween(player.position.y, -depth, depth)) {
+        player.position.copy(oldPos);
+        return false;
+    } else {
+        player.__dirtyPosition = true;
+        player.__dirtyRotation = true;
+        return true;
+    }
+
 }
 
 // ***** RUN TIME ******************************************************************************************************
