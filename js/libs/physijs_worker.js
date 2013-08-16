@@ -394,7 +394,13 @@ if ( description.children ) {
 		body.setCollisionFlags( description.collision_flags );
 	}
 	
-	world.addRigidBody( body );
+	//world.addRigidBody( body );
+    if ( typeof description.collision_type === 'undefined' ) {
+        world.addRigidBody( body );
+    }else{
+        world.addRigidBody( body, description.collision_type,
+            (typeof description.collision_masks === 'undefined'?0:description.collision_masks) );
+    }
 	
 	body.id = description.id;
 	_objects[ body.id ] = body;

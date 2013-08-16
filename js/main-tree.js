@@ -38,7 +38,7 @@ var keys = []; // array for storing which keys are up/down
 
 var balls = {}, ballCounter = 0, currentBallCount = 0, maxBallCount = 10;
 
-var hud = {};
+var hud = {}, notificationHud;
 
 var chaseCamEnabled = true;
 var chaseScale = 2.5;
@@ -152,7 +152,6 @@ if ( havePointerLock ) {
 
     instructions.innerHTML = 'Your browser doesn\'t seem to support Pointer Lock API';
 
-
 }
 
 // ***** INIT TIME *****************************************************************************************************
@@ -184,6 +183,7 @@ function init() {
     $('body').mousewheel( onMouseScroll ) ;
     hud.currentBallCount = $('#hud-ammo .current');
     hud.maxBallCount = $('#hud-ammo .max');
+    notificationHud = $('#hud-notifications ul');
 
     $(document).ready(function(){
 
@@ -370,6 +370,7 @@ function connect(nickname) {
         console.log("player", data.playerId, "is now known as", data.nickname);
         players[data.playerId].userData.nickname = data.nickname;
         updatePlayerSprite(data.playerId);
+        addNotification(data.nickname+' connected');
     });
 
     socket.on('moves', function (data) {
@@ -400,16 +401,30 @@ function connect(nickname) {
 //        playerSourceId: other_object.userData.playerSourceId,
 //        velocity: relative_velocity.length(),
 //        newHp: player.userData.hp
-        if (data.newHp < 0) {
+        if (data.newHp <= 0) {
             // KILLED
             console.log(' ** PLAYER ' + data.playerId + ' WAS KILLED BY PLAYER ' + data.playerSourceId + ' ***', data);
+            var sourceName = data.playerSourceId == playerId ? nickname : players[data.playerSourceId].userData.nickname,
+                victimName = '';
+
             if (data.playerId == playerId) {
                 // THIS PLAYER IS NOW DEAD
                 player.userData.hp = data.newHp;
                 deadScreen.show();
+                dropDeadBody(player);
+                player.visible = false;
+                player.userData.sprite.visible = false;
+                victimName = nickname;
             } else {
                 players[data.playerId].userData.hp = data.newHp;
+                dropDeadBody(players[data.playerId]);
+                players[data.playerId].visible = false;
+                players[data.playerId].userData.sprite.visible = false;
+                victimName = players[data.playerId].userData.nickname;
             }
+
+            addNotification(sourceName +' killed ' + victimName);
+
         } else {
             // STILL ALIVE
             console.log(' ** PLAYER ' + data.playerId + ' WAS HIT BY PLAYER ' + data.playerSourceId + ' ***', data);
@@ -437,21 +452,27 @@ function connect(nickname) {
             lockPlayerZ();
             player.__dirtyPosition = true;
             player.__dirtyRotation = true;
+            player.visible = true;
+            player.userData.sprite.visible = true;
 
         } else {
             players[data.player_id].userData.hp = data.hp;
             updatePlayer(data.player_id, data.pos);
+            players[data.player_id].visible = true;
+            players[data.player_id].userData.sprite.visible = false;
         }
         updatePlayerSprite(data.player_id);
     });
 
     socket.on('new_player', function (data) {
-        console.log('player connected', data);
+        //console.log('player connected', data);
         addPlayer(data);
     });
 
     socket.on('delete_player', function (data) {
-        console.log('player disconnected', data);
+        //console.log('player disconnected', data);
+        var name = data == playerId ? nickname : players[data].userData.nickname;
+        addNotification(name + ' disconnected');
         deletePlayer(data);
     });
 }
@@ -656,11 +677,18 @@ function createScene(data) {
 
 
     // Add current players
+    var names = [];
     for (var i in playerList) {
         var p = playerList[i];
         if (p.player_id != playerId) {
             addPlayer(p);
+            names.push(p.nickname);
         }
+    }
+    if (names.length > 0) {
+        addNotification('Player'+(names.length == 1 ? '' : 's')+' '+names.join(', ') + ' is here.');
+    } else {
+        addNotification('You are all alone in this server. :(');
     }
 
 
@@ -713,6 +741,8 @@ function createScene(data) {
         //camera.lookAt(gameCameraTarget);
         requestAnimationFrame(render);
         setInterval(ballWatcher, 500);
+        setInterval(sendPosition, 25);
+        setInterval(cycleNotifications, 3000);
 
         lockPlayerZ();
     } );
@@ -1117,6 +1147,8 @@ function onMouseMove(e) {
     player.__dirtyRotation = true;
     player.__dirtyPosition = true;
 
+    broadcastPosition();
+
     // Update
 //    mouse.lastX = mouse.x;
 //    mouse.lastY = mouse.y;
@@ -1255,40 +1287,46 @@ function addPlayer(data) {
         if (other_object.userData.sourcePlayerId == playerId) {
 
             // Update player HP
-            player.userData.hp -= relative_velocity.length();
+            if (player.userData.hp > 0) {
+                player.userData.hp -= relative_velocity.length();
 
-            //console.log('ouch!', player, player.userData.id, relative_velocity, relative_velocity.length(), player.userData.hp);
+                //console.log('ouch!', player, player.userData.id, relative_velocity, relative_velocity.length(), player.userData.hp);
 
-            // FIXME: this ball won't remove from other player's screens
+                socket.emit('hit', {
+                    playerId: player.userData.id,
+                    playerSourceId: other_object.userData.sourcePlayerId,
+                    velocity: relative_velocity.length(),
+                    newHp: player.userData.hp
+                });
 
-            if (player.userData.hp < 0) {
-//                player.position.set(player.userData.start_pos.x, player.userData.start_pos.y, 0);
-//                player.__dirtyPosition = true;
-//                player.__dirtyRotation = true;
-//                lockPlayerZ(player);
-//                player.userData.hp = 100;
-                //console.log(' *** PLAYER ' + player.userData.id + ' ('+player.userData.nickname+') WAS KILLED BY PLAYER '+ other_object.userData.sourcePlayerId + ' *** ');
+                socket.emit('unfire', {
+                    playerId: playerId,
+                    ballId: other_object.userData.ballId
+                });
+
+                // FIXME: this ball won't remove from other player's screens
+
+                if (player.userData.hp <= 0) {
+    //                player.position.set(player.userData.start_pos.x, player.userData.start_pos.y, 0);
+    //                player.__dirtyPosition = true;
+    //                player.__dirtyRotation = true;
+    //                lockPlayerZ(player);
+    //                player.userData.hp = 100;
+                    //console.log(' *** PLAYER ' + player.userData.id + ' ('+player.userData.nickname+') WAS KILLED BY PLAYER '+ other_object.userData.sourcePlayerId + ' *** ');
+
+                    dropDeadBody(player);
+                    player.visible = false;
+                    player.userData.sprite.visible = false;
+                    addNotification(window.nickname +' killed ' + player.userData.nickname);
+                }
+
+                deleteBallById(other_object.userData.sourcePlayerId, other_object.userData.ballId);
+
+                currentBallCount--;
+                hud.currentBallCount.text(maxBallCount - currentBallCount);
+
+                updatePlayerSprite(player.userData.id);
             }
-
-            socket.emit('hit', {
-                playerId: player.userData.id,
-                playerSourceId: other_object.userData.sourcePlayerId,
-                velocity: relative_velocity.length(),
-                newHp: player.userData.hp
-            });
-
-            socket.emit('unfire', {
-                playerId: playerId,
-                ballId: other_object.userData.ballId
-            });
-
-            deleteBallById(other_object.userData.sourcePlayerId, other_object.userData.ballId);
-
-            currentBallCount--;
-            hud.currentBallCount.text(maxBallCount - currentBallCount);
-
-            updatePlayerSprite(player.userData.id);
-
         }
     });
 
@@ -1343,13 +1381,22 @@ function deletePlayer(id) {
     }
 }
 
+var positionToBroadcast = null;
+
 function broadcastPosition() {
-    socket.emit('move', {
+    positionToBroadcast = {
         x: player.position.x,
         y: player.position.y,
         z: player.position.z,
         zRotation: player.rotation.z
-    });
+    };
+}
+
+function sendPosition() {
+    if (positionToBroadcast != null) {
+        socket.emit('move', positionToBroadcast);
+        positionToBroadcast = null;
+    }
 }
 
 function updateChaseCamLocation() {
@@ -1932,6 +1979,61 @@ function moveIfInBounds(xTranslation, yTranslation) {
         return true;
     }
 
+}
+
+function dropDeadBody(targetPlayer) {
+
+    var cubeMaterials = new THREE.MeshPhongMaterial( {
+        color: targetPlayer.material.color,
+        ambient: targetPlayer.material.color, // should generally match color
+        specular: 0x050505,
+        shininess: 100
+    } ) ;// new THREE.MeshPhongMaterial( { color: 0xeeeeee } );
+
+    var cubeGeo = new THREE.CubeGeometry( 1, 1, 2, 1, 1, 1 );
+
+    var playerPhysMaterials = Physijs.createMaterial(
+        cubeMaterials,
+        .8, // high friction
+        .4 // low restitution
+    );
+
+    var body = new Physijs.BoxMesh(
+        cubeGeo,
+        playerPhysMaterials,
+        0.5
+    );
+
+
+    body.castShadow = true;
+    body.receiveShadow = true;
+
+    body.matrix.copy(targetPlayer.matrix);
+    body.matrixWorld.copy(targetPlayer.matrixWorld);
+    body.position.copy(targetPlayer.position);
+
+    //body.add(targetPlayer.userData.sprite.clone());
+
+    scene.add( body );
+
+}
+
+function addNotification(message) {
+    $('<li>'+message+'</li>').data('added', Date.now()).appendTo(notificationHud);
+}
+
+function cycleNotifications() {
+    var activeNotifications = $('li', notificationHud);
+    if (activeNotifications.length > 0) {
+
+        var n = $(activeNotifications[0]);
+        if (Date.now() - n.data('added') > 3000) {
+            n.css('margin-top', -38);
+            setTimeout(function() {
+                n.remove();
+            }, 1000);
+        }
+    }
 }
 
 // ***** RUN TIME ******************************************************************************************************

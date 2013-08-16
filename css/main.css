@@ -223,7 +223,7 @@ body {
     border: solid 1px #ccc;
     border-radius: 5px;
     line-height: 60px;
-    padding: 0;
+    padding: 0 10px;
     margin-right: 5px;
     margin-top: 7px;
 }
@@ -258,6 +258,30 @@ body {
     font-size: 25px;
 }
 
+#hud-notifications {
+    position: absolute;
+    display: block;
+    top: 0;
+    right: 0;
+    color: #fff;
+    padding: 0 10px 8px;
+}
+
+#hud-notifications ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+#hud-notifications ul li {
+    padding: 4px 10px;
+    height: 30px;
+    -moz-transition: margin-top 1s, -moz-transform 2s;
+    -webkit-transition: margin-top 1s, -webkit-transform 2s;
+    -o-transition: margin-top 1s, -o-transform 2s;
+    transition: margin-top 1s, transform 2s;
+    text-align: right;
+}
 
 
 

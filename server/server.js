@@ -128,12 +128,12 @@ io.sockets.on('connection', function (socket) {
 
         // Remove the player
         delete players[id];
-        socket.broadcast.emit('delete_player', playerData.player_id);
+        socket.broadcast.emit('delete_player', id);
         console.log('players are now', players);
     });
 
     socket.on('nickname', function(data){
-        console.log('nickname', data);
+        //console.log('nickname', data);
         if (data.length > 3) {
             players[id].nickname = data;
             socket.broadcast.emit('nicknames', {
@@ -153,7 +153,7 @@ io.sockets.on('connection', function (socket) {
 
     socket.on('fire', function (data) {
         if (players[id].hp > 0) {
-            console.log('fire', data);
+            //console.log('fire', data);
             data.color = players[id].color;
             players[id].balls[data.ballId] = data;
             socket.broadcast.emit("fires", data);
@@ -162,7 +162,7 @@ io.sockets.on('connection', function (socket) {
 
     socket.on('unfire', function(data) {
         if (players[data.playerId].balls[data.ballId] != null) {
-            console.log('unfire', data);
+            //console.log('unfire', data);
             delete players[data.playerId].balls[data.ballId];
 
             socket.broadcast.emit("unfires", [{
@@ -207,7 +207,7 @@ io.sockets.on('connection', function (socket) {
     socket.on('hit', function(data) {
         // Accept hits if alive
         if (players[data.playerId].hp > 0) {
-            console.log('player hit', data);
+            //console.log('player hit', data);
 
             players[data.playerId].hp = data.newHp;
             if (data.newHp < 0) {
