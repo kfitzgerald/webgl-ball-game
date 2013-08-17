@@ -14,6 +14,10 @@ Hope you enjoy, build upon, and hack this thing.
 Btw, the code that's in this repo is a pile of garbage and contains various tangents and
 ideas from the last year or two.
 
+## Demo
+
+Check it out: http://games.soarcetech.com/balls/tree.html
+
 
 ## Setup
 
@@ -30,6 +34,14 @@ If you really want it to run and restart on crash, try this:
 
 `while true; do echo 'Hit CTRL+C TO KILL'; node server.js ; sleep 1; done`
 
+## Caveats
+
+Since this is purely just a prototype of a game, there's absolutely no:
+
+* **Security**: clients can hack and do naughty things
+ * Clients handle their own balls, so clients report their own hits. 
+* **Consistency**: physics are not synchronized on the server/clients. They could be, but this example lacks this for now. Check out Jonas Gehring's blog post on how this might be possible some day: http://www.jjoe64.com/2013/07/physijs-and-threejs-on-nodejs.html
+ * Clients report the position and angle when firing balls. In theory, the ball will follow a pretty consistent path, but tends to vary a bit from client to client, probably due to lag time and a bit of randomness.
 
 ## Features
 
@@ -45,3 +57,4 @@ If you really want it to run and restart on crash, try this:
 * Art style inspired by Tim Reynolds ([@turnislefthome](https://twitter.com/turnislefthome), http://www.turnislefthome.com)
 * Ideas vetted by bestie Adam Vogel ([@adambvogel](https://twitter.com/adambvogel), http://adamvogel.net)
 * Play tested and approved by my lovely wife Luciana ([@leafitz](https://twitter.com/leafitz), http://lucianaelisa.net)
+* Home grown in Milwaukee, WI
