@@ -134,7 +134,7 @@ io.sockets.on('connection', function (socket) {
 
     socket.on('nickname', function(data){
         //console.log('nickname', data);
-        if (data.length > 3) {
+        if (data.length >= 3) {
             players[id].nickname = data;
             socket.broadcast.emit('nicknames', {
                 playerId: id,

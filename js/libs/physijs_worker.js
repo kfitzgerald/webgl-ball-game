@@ -396,8 +396,10 @@ if ( description.children ) {
 	
 	//world.addRigidBody( body );
     if ( typeof description.collision_type === 'undefined' ) {
+        //console.log('added body the old way', body, description);
         world.addRigidBody( body );
     }else{
+        //console.log('added body the new way', body, description);
         world.addRigidBody( body, description.collision_type,
             (typeof description.collision_masks === 'undefined'?0:description.collision_masks) );
     }

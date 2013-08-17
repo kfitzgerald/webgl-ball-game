@@ -43,7 +43,7 @@ var hud = {}, notificationHud;
 var chaseCamEnabled = true;
 var chaseScale = 2.5;
 var toggleWatchers = {};
-var speed = 0.2, angleSpeed = 0.1;
+var speed = 8, angleSpeed = 0.1;
 
 var loaded = false;
 
@@ -57,6 +57,37 @@ var mouse = {
 };
 
 var socket, playerId, players = {}, deadScreen, nickname;
+
+
+
+var CollisionTypes = {
+    NOTHING: 0,
+    BALL: 1,
+    PLAYER: 2,
+    TREE: 4,
+    BODY: 8,
+    GROUND: 16
+};
+
+var CollisionMasks = {
+    BALL:   CollisionTypes.PLAYER |
+            CollisionTypes.TREE |
+            CollisionTypes.GROUND, // |
+            //CollisionTypes.BODY,
+
+    PLAYER: CollisionTypes.BALL |
+            CollisionTypes.BODY,
+
+    TREE:   CollisionTypes.BALL,
+
+    BODY:   CollisionTypes.PLAYER |
+            CollisionTypes.GROUND,
+
+    GROUND: CollisionTypes.BALL |
+            CollisionTypes.BODY
+};
+
+
 
 // ***** POINTER LOCK **************************************************************************************************
 
@@ -187,13 +218,20 @@ function init() {
 
     $(document).ready(function(){
 
+
+
         $('#loading form').bind('submit', function(e) {
             e.preventDefault();
             var nick = $.trim($('#nickname').val());
             if (nick.match(/^[a-zA-Z0-9_]{3,15}$/)) {
+                if (window.io == null) {
+                    alert('Hmm. Appears the server is down... might be a fluke :/');
+                    window.location.reload();
+                    return;
+                }
                 $('#loading button').unbind('click');
                 nickname = nick;
-                connect(nickname);
+                connect(nick);
                 $('#loading .error').hide();
                 $('#loading').hide();
             } else {
@@ -315,6 +353,8 @@ function connect(nickname) {
     // SOCKET
     //
 
+
+
     socket = io.connect('http://'+window.location.hostname+':8080');
     socket.on('connected', function(data) {
         console.log('socket connected', data);
@@ -324,7 +364,8 @@ function connect(nickname) {
         //socket.emit('subscribe', params);
 
         socket.on('disconnect', function(data) {
-            console.error('lost connection to server');
+            alert('Connection dropped - :(');
+            window.location.reload();
         });
 
         socket.emit('nickname', nickname);
@@ -427,7 +468,7 @@ function connect(nickname) {
 
         } else {
             // STILL ALIVE
-            console.log(' ** PLAYER ' + data.playerId + ' WAS HIT BY PLAYER ' + data.playerSourceId + ' ***', data);
+            //console.log(' ** PLAYER ' + data.playerId + ' WAS HIT BY PLAYER ' + data.playerSourceId + ' ***', data);
             if (data.playerId == playerId) {
                 player.userData.hp = data.newHp;
             } else {
@@ -438,7 +479,7 @@ function connect(nickname) {
     });
 
     socket.on('respawns', function(data) {
-        console.log('player respawn', data);
+//        console.log('player respawn', data);
 //        player_id: id,
 //        hp: players[id].hp,
 //        pos: respawnLoc
@@ -665,6 +706,10 @@ function createScene(data) {
     // Init the chase angle
     chaseAngle = Math.asin((normalizedCameraPos.z) / radius);
 
+
+    player._physijs.collision_type = CollisionTypes.PLAYER;
+    player._physijs.collision_masks = CollisionMasks.PLAYER;
+
     scene.add( player );
 
     updatePlayerSprite(playerId);
@@ -686,7 +731,7 @@ function createScene(data) {
         }
     }
     if (names.length > 0) {
-        addNotification('Player'+(names.length == 1 ? '' : 's')+' '+names.join(', ') + ' is here.');
+        addNotification('Player'+(names.length == 1 ? '' : 's')+' '+names.join(', ') + ' '+(names.length == 1 ? 'is' : 'are')+' here.');
     } else {
         addNotification('You are all alone in this server. :(');
     }
@@ -795,8 +840,9 @@ function animate(delta) {
     updateChaseCamLocation();
 
     var playerMoved = false,
-        playerSpeed = isKeyDown(KEYCODE.SHIFT) ? speed * 2 : speed,
+        playerSpeed = isKeyDown(KEYCODE.SHIFT) ? speed * 2 * delta : speed * delta,
         playerAngleSpeed = Math.PI / 2 * angleSpeed;
+
 
         if (player.userData.hp > 0) {
 
@@ -1337,6 +1383,9 @@ function addPlayer(data) {
     player.castShadow = true;
     player.receiveShadow = true;
 
+    player._physijs.collision_type = CollisionTypes.PLAYER;
+    player._physijs.collision_masks = CollisionMasks.PLAYER;
+
     // Set x/y
     player.position.x = currentPos.x;
     player.position.y = currentPos.y;
@@ -1484,6 +1533,8 @@ function createPlaneFromData(data, worldWidth, worldDepth, width, height, materi
     var t = new Physijs.HeightfieldMesh(terrainGeometry, material, 0, worldWidth - 1, worldDepth - 1);
     t.castShadow = true;
     t.receiveShadow = true;
+    t._physijs.collision_type = CollisionTypes.GROUND;
+    t._physijs.collision_masks = CollisionMasks.GROUND;
     return t;
 }
 
@@ -1516,6 +1567,8 @@ function addBall(position, force, restitution, playerId, color, ballId) {
 
     bumper.userData.sourcePlayerId = playerId;
     bumper.userData.ballId = ballId;
+    bumper._physijs.collision_type = CollisionTypes.BALL;
+    bumper._physijs.collision_masks = CollisionMasks.BALL;
     scene.add( bumper );
 
     bumper.updateMatrixWorld();
@@ -1663,6 +1716,13 @@ function addTree(x, y, z, rotation) {
             );
 
 
+            treeBox._physijs.collision_type = CollisionTypes.TREE;
+            treeBox._physijs.collision_masks = CollisionMasks.TREE;
+
+            treeLeafBox._physijs.collision_type = CollisionTypes.TREE;
+            treeLeafBox._physijs.collision_masks = CollisionMasks.TREE;
+
+
             treeContainer.position = new THREE.Vector3(x, y, c[0].point.z);
             treeContainer.add(treeBox);
             treeContainer.add(treeLeafBox);
@@ -1679,16 +1739,16 @@ function addTree(x, y, z, rotation) {
         }
     } else {
         //var tree = new THREE.Mesh( treeGeo, treeMats );
-        var tree = new Physijs.BoxMesh(
-            treeGeo,
-            treeMats,
-            0 // mass is immobile
-        );
-        tree.castShadow = true;
-        tree.position = new THREE.Vector3(x, y, z);
-        tree.rotation.z = rotation != null ? rotation : Math.random() * Math.PI;
-
-        scene.add(tree);
+//        var tree = new Physijs.BoxMesh(
+//            treeGeo,
+//            treeMats,
+//            0 // mass is immobile
+//        );
+//        tree.castShadow = true;
+//        tree.position = new THREE.Vector3(x, y, z);
+//        tree.rotation.z = rotation != null ? rotation : Math.random() * Math.PI;
+//
+//        scene.add(tree);
     }
 }
 
@@ -2007,6 +2067,8 @@ function dropDeadBody(targetPlayer) {
 
     body.castShadow = true;
     body.receiveShadow = true;
+    body._physijs.collision_type = CollisionTypes.BODY;
+    body._physijs.collision_masks = CollisionMasks.BODY;
 
     body.matrix.copy(targetPlayer.matrix);
     body.matrixWorld.copy(targetPlayer.matrixWorld);
