@@ -21,6 +21,8 @@ ideas from the last year or two.
 2. Install node.js (http://nodejs.org/)
 3. Change into the server directory, and install socket.io (http://socket.io/), e.g. `npm install socket.io`
 4. Run the server: `node server.js`
+5. Run the webgl-game as a local virtual host (e.g. apache)
+6. Load up Google Chrome and visit `tree.html`
 
 Stop the server with CTRL+C
 
