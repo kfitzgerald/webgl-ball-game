@@ -43,7 +43,7 @@ var hud = {}, notificationHud;
 var chaseCamEnabled = true;
 var chaseScale = 2.5;
 var toggleWatchers = {};
-var speed = 8, angleSpeed = 0.1;
+var speed = 8, angleSpeed = 1.25;
 
 var loaded = false;
 
@@ -841,7 +841,7 @@ function animate(delta) {
 
     var playerMoved = false,
         playerSpeed = isKeyDown(KEYCODE.SHIFT) ? speed * 2 * delta : speed * delta,
-        playerAngleSpeed = Math.PI / 2 * angleSpeed;
+        playerAngleSpeed = Math.PI / 2 * (isKeyDown(KEYCODE.SHIFT) ? 2*angleSpeed : angleSpeed) * delta;
 
 
         if (player.userData.hp > 0) {
@@ -862,27 +862,16 @@ function animate(delta) {
             playerMoved = moveIfInBounds(-playerSpeed, 0) || playerMoved;
         }
 
-        if (isKeyDown(KEYCODE.Z)) {
-            //player.position.x -= 0.10;
-
-            player.position.set(0,0,0);
-            player.__dirtyPosition = true;
-            player.__dirtyRotation = true;
-            lockPlayerZ();
-            playerMoved = true;
-        }
-
-//        if (isKeyDown(KEYCODE.UP_ARROW)) {
-//            //player.position.z += 0.10;
-//            //player.translateZ(playerSpeed);
-//            //playerMoved = true;
-//        }
+//        if (isKeyDown(KEYCODE.Z)) {
+//            //player.position.x -= 0.10;
 //
-//        if (isKeyDown(KEYCODE.DOWN_ARROW)) {
-//            //player.position.z -= 0.10;
-//            //player.translateZ(-playerSpeed);
-//    //        playerMoved = true;
+//            player.position.set(0,0,0);
+//            player.__dirtyPosition = true;
+//            player.__dirtyRotation = true;
+//            lockPlayerZ();
+//            playerMoved = true;
 //        }
+
 
         var rotation_matrix = new THREE.Matrix4().identity();
         if (isKeyDown(KEYCODE.LEFT_ARROW) && !isKeyDown(KEYCODE.RIGHT_ARROW)) {
@@ -901,27 +890,27 @@ function animate(delta) {
             playerMoved = true;
         }
 
-        if (isKeyDown(KEYCODE.SPACE)) {
-            if (!isWaitRequired(KEYCODE.SPACE)) {
-                waitRequired(KEYCODE.SPACE);
-                pauseRotation = !pauseRotation;
-            }
-        }
+//        if (isKeyDown(KEYCODE.SPACE)) {
+//            if (!isWaitRequired(KEYCODE.SPACE)) {
+//                waitRequired(KEYCODE.SPACE);
+//                pauseRotation = !pauseRotation;
+//            }
+//        }
 
-        if (isKeyDown(KEYCODE.SHIFT) && isKeyDown(KEYCODE.SPACE)) {
-            lightRig.rotation.y -= 0.01;
-        }
+//        if (isKeyDown(KEYCODE.SHIFT) && isKeyDown(KEYCODE.SPACE)) {
+//            lightRig.rotation.y -= 0.01;
+//        }
 
-        if (isKeyDown(KEYCODE.P)) {
-            //cameraPlaceholderHelper.visible = !cameraPlaceholderHelper.visible;
-            light.shadowCameraVisible = !light.shadowCameraVisible;
-        }
+//        if (isKeyDown(KEYCODE.P)) {
+//            //cameraPlaceholderHelper.visible = !cameraPlaceholderHelper.visible;
+//            light.shadowCameraVisible = !light.shadowCameraVisible;
+//        }
 
-        if (isKeyDown(KEYCODE.L)) {
-            if (!isWaitRequired(KEYCODE.L)) {
-                drawPlayerLazer();
-            }
-        }
+//        if (isKeyDown(KEYCODE.L)) {
+//            if (!isWaitRequired(KEYCODE.L)) {
+//                drawPlayerLazer();
+//            }
+//        }
 
 //        if (isKeyDown(KEYCODE.B)) {
 //            if (!isWaitRequired(KEYCODE.B)) {
