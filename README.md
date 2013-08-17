@@ -7,7 +7,7 @@ This thing is frankenstein'ed together from various examples, tidbits, blogs and
 repositories from far and wide. It's basically the culmination of things I've been poking at
 for the last few years.
 
-Art inspired by Tim Reynolds (@turnislefthome, http://www.turnislefthome.com)
+Art inspired by Tim Reynolds ([@turnislefthome](https://twitter.com/turnislefthome), http://www.turnislefthome.com)
 
 Hope you enjoy, build upon, and hack this thing.
 
@@ -39,7 +39,7 @@ If you really want it to run and restart on crash, try this:
 
 ## Credits
 
-* Written by Kevin Fitzgerald (@kftzg, http://kevinfitzgerald.net)
-* Art style inspired by Tim Reynolds (@turnislefthome, http://www.turnislefthome.com)
-* Ideas vetted by bestie Adam Vogel (@adambvogel, http://adamvogel.net)
-* Play tested and approved by my lovely wife Luciana (@leafitz, http://lucianaelisa.net)
+* Written by Kevin Fitzgerald ([@kftzg](https://twitter.com/kftzg), http://kevinfitzgerald.net)
+* Art style inspired by Tim Reynolds ([@turnislefthome](https://twitter.com/turnislefthome), http://www.turnislefthome.com)
+* Ideas vetted by bestie Adam Vogel ([@adambvogel](https://twitter.com/adambvogel), http://adamvogel.net)
+* Play tested and approved by my lovely wife Luciana ([@leafitz](https://twitter.com/leafitz), http://lucianaelisa.net)
