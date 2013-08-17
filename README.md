@@ -38,6 +38,7 @@ If you really want it to run and restart on crash, try this:
 
 Since this is purely just a prototype of a game, there's absolutely no:
 
+* **Performance**: movement is reported on a set interval, and is not optimal. Many clients in the server tends to flood the server out and lag everything out.
 * **Security**: clients can hack and do naughty things
  * Clients handle their own balls, so clients report their own hits. 
 * **Consistency**: physics are not synchronized on the server/clients. They could be, but this example lacks this for now. Check out Jonas Gehring's blog post on how this might be possible some day: http://www.jjoe64.com/2013/07/physijs-and-threejs-on-nodejs.html
