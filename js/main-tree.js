@@ -357,9 +357,9 @@ function connect(nickname) {
 
     socket = io.connect('http://'+window.location.hostname+':8080');
     socket.on('connected', function(data) {
-        console.log('socket connected', data);
+        //console.log('socket connected', data);
         playerId = data.player.player_id;
-        console.log('I AM PLAYER ', playerId, nickname);
+        //console.log('I AM PLAYER ', playerId, nickname);
 
         //socket.emit('subscribe', params);
 
@@ -408,7 +408,7 @@ function connect(nickname) {
     });
 
     socket.on('nicknames', function(data){
-        console.log("player", data.playerId, "is now known as", data.nickname);
+        //console.log("player", data.playerId, "is now known as", data.nickname);
         players[data.playerId].userData.nickname = data.nickname;
         updatePlayerSprite(data.playerId);
         addNotification(data.nickname+' connected');
