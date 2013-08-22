@@ -16,7 +16,7 @@ ideas from the last year or two.
 
 ## Demo
 
-Check it out: http://games.soarcetech.com/balls/tree.html
+Check it out: http://games.soarcetech.com/balls/
 
 
 ## Setup
