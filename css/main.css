@@ -18,6 +18,11 @@ textarea {
     color: #222;
 }
 
+html, body {
+    height: 100%;
+    width: 100%;
+}
+
 body {
     font-size: 1em;
     line-height: 1.4;
@@ -283,7 +288,25 @@ body {
     text-align: right;
 }
 
+.about {
+    position: absolute;
+    bottom: 0;
+    text-align: center;
+    left: 0;
+    right: 0;
+    height: 35px;
+    color: #ccc;
+}
 
+.about a,
+.about a:visited {
+    color: #f73;
+}
+
+.about a:active,
+.about a:hover {
+    color: #f96;
+}
 
 
 

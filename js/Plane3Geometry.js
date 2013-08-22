@@ -1,4 +1,25 @@
 
+/**
+ * @author Kevin Fitzgerald / @kftzg / http://kevinfitzgerald.net
+ * Git: https://github.com/kfitzgerald/webgl-ball-game
+ * based on http://threejsdoc.appspot.com/doc/three.js/src.source/extras/geometries/PlaneGeometry.js.html by mr.doob / http://mrdoob.com/
+ * which is based on http://papervision3d.googlecode.com/svn/trunk/as3/trunk/src/org/papervision3d/objects/primitives/Plane.as
+ */
+
+// Copyright 2013 Kevin Fitzgerald
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 THREE.Plane3RandGeometry = function ( width, height, widthSegments, heightSegments ) {
 
     THREE.Geometry.call( this );
@@ -92,7 +113,6 @@ THREE.Plane3RandGeometry = function ( width, height, widthSegments, heightSegmen
 
 THREE.Plane3RandGeometry.prototype = Object.create( THREE.Geometry.prototype );
 
-
 THREE.Plane3Geometry = function ( width, height, widthSegments, heightSegments ) {
 
     THREE.Geometry.call( this );
@@ -130,46 +150,16 @@ THREE.Plane3Geometry = function ( width, height, widthSegments, heightSegments )
             var c = ( ix + 1 ) + gridX1 * ( iz + 1 );
             var d = ( ix + 1 ) + gridX1 * iz;
 
-            /*var face = new THREE.Face4( a, b, c, d );
-             face.normal.copy( normal );
-             face.vertexNormals.push( normal.clone(), normal.clone(), normal.clone(), normal.clone() );
-
-             this.faces.push( face );
-             this.faceVertexUvs[ 0 ].push( [
-             new THREE.UV( ix / gridX, 1 - iz / gridZ ),
-             new THREE.UV( ix / gridX, 1 - ( iz + 1 ) / gridZ ),
-             new THREE.UV( ( ix + 1 ) / gridX, 1 - ( iz + 1 ) / gridZ ),
-             new THREE.UV( ( ix + 1 ) / gridX, 1 - iz / gridZ )
-             ] );*/
-
-
             var face = new THREE.Face3( a, b, c );
             face.normal.copy( normal );
             face.vertexNormals.push( normal.clone(), normal.clone(), normal.clone() );
             this.faces.push( face );
-            /*this.faceVertexUvs[ 0 ].push( [
-             new THREE.UV( ix / gridX, 1 - iz / gridZ ),
-             new THREE.UV( ix / gridX, 1 - ( iz + 1 ) / gridZ ),
-             new THREE.UV( ( ix + 1 ) / gridX, 1 - ( iz + 1 ) / gridZ )
-             ] );*/
 
             var face2 = new THREE.Face3( c, d, a );
             face2.normal.copy( normal );
             face2.vertexNormals.push( normal.clone(), normal.clone(), normal.clone() );
             this.faces.push( face2 );
-            /*this.faceVertexUvs[ 0 ].push( [
-             new THREE.UV( ( ix + 1 ) / gridX, 1 - ( iz + 1 ) / gridZ ),
-             new THREE.UV( ( ix + 1 ) / gridX, 1 - iz / gridZ ),
-             new THREE.UV( ix / gridX, 1 - iz / gridZ ),
-             ] );*/
 
-            /*			this.faceVertexUvs[ 0 ].push( [
-             new THREE.UV( ix / gridX, 1 - iz / gridZ ),
-             new THREE.UV( ix / gridX, 1 - ( iz + 1 ) / gridZ ),
-             new THREE.UV( ( ix + 1 ) / gridX, 1 - ( iz + 1 ) / gridZ ),
-             new THREE.UV( ( ix + 1 ) / gridX, 1 - iz / gridZ )
-             ] );
-             */
             this.faceVertexUvs[ 0 ].push( [
                 new THREE.Vector2( ix / gridX, 1 - iz / gridZ ),			//A
                 new THREE.Vector2( ix / gridX, 1 - ( iz + 1 ) / gridZ ),		//B
@@ -192,15 +182,15 @@ THREE.Plane3Geometry = function ( width, height, widthSegments, heightSegments )
 
 THREE.Plane3Geometry.prototype = Object.create( THREE.Geometry.prototype );
 
+// http://mrl.nyu.edu/~perlin/noise/
+
 function generateHeight( width, height ) {
 
     var size = width * height, data = new Float32Array( size ),
         perlin = new ImprovedNoise(), quality = 1, z = Math.random() * 100;
 
     for ( var i = 0; i < size; i ++ ) {
-
         data[ i ] = 0
-
     }
 
     for ( var j = 0; j < 4; j ++ ) {
@@ -209,7 +199,6 @@ function generateHeight( width, height ) {
 
             var x = i % width, y = ~~ ( i / width );
             data[ i ] += Math.abs( perlin.noise( x / quality, y / quality, z ) * quality * 1.75 );
-
 
         }
 

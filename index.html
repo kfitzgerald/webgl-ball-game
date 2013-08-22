@@ -1,58 +1,129 @@
 <!DOCTYPE html>
-<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
-<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
-<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
-    <head>
-        <meta charset="utf-8">
-        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-        <title></title>
-        <meta name="description" content="">
-        <meta name="viewport" content="width=device-width">
-        <meta http-equiv="refresh" content="0;URL='tree.html'" />
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7" itemscope itemtype="http://schema.org/CreativeWork"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8" itemscope itemtype="http://schema.org/CreativeWork"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9" itemscope itemtype="http://schema.org/CreativeWork"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" itemscope itemtype="http://schema.org/CreativeWork"> <!--<![endif]-->
+<head>
 
-        <!-- Place favicon.ico and apple-touch-icon.png in the root directory -->
+<!--
+    WebGL Ball Game Client
 
-        <link rel="stylesheet" href="css/normalize.css">
-        <link rel="stylesheet" href="css/main.css">
-        <script src="js/libs/modernizr-2.6.1.min.js"></script>
-    </head>
-    <body>
-        <!--[if lt IE 7]>
-            <p class="chromeframe">You are using an outdated browser. <a href="http://browsehappy.com/">Upgrade your browser today</a> or <a href="http://www.google.com/chromeframe/?redirect=true">install Google Chrome Frame</a> to better experience this site.</p>
-        <![endif]-->
+    @author Kevin Fitzgerald / @kftzg / http://kevinfitzgerald.net
+    Git: https://github.com/kfitzgerald/webgl-ball-game
+    Last Updated: 8/22/13 9:23 AM CST
+
+    Copyright 2013 Kevin Fitzgerald
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+    http: *www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <title itemprop="name">WebGL Ball Game</title>
+    <meta itemprop="description" name="description" content="Throw balls at your friends.">
+    <meta name="keywords" content="Balls, Games, Physics, Multiplayer, HTML5, WebGL, THREE.js, Physi.js, Ammo.js, Bullet, Node.js, Socket.io, Pointerlock">
+    <meta name="author" content="Kevin Fitzgerald">
+    <meta name="viewport" content="width=device-width">
+
+    <!-- Place favicon.ico and apple-touch-icon.png in the root directory -->
+
+    <link rel="stylesheet" href="css/normalize.css">
+    <link rel="stylesheet" href="css/main.css">
+    <script src="js/libs/modernizr-2.6.1.min.js"></script>
+</head>
+<body>
+<div id="pagewrapper"></div>
+<!--[if lt IE 7]>
+<p class="chromeframe">You are using an outdated browser. <a href="http://browsehappy.com/">Upgrade your browser today</a> or <a href="http://www.google.com/chromeframe/?redirect=true">install Google Chrome Frame</a> to better experience this site.</p>
+<![endif]-->
 
 
-        <div id="info">	</div>
+<div id="info">	</div>
 
-        <!--<script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.0/jquery.min.js"></script>
-        <script>window.jQuery || document.write('<script src="js/vendor/jquery-1.8.0.min.js"><\/script>')</script>-->
-        
-        <script src="js/libs/jquery-1.8.0.min.js"></script>
-        
-        <script src="js/libs/three-r58.js"></script>
-		
-		<script src="js/libs/ColladaLoader.js"></script>
+<div id="loading">
+    <div>
+        <form action="#" method="get">
+            <label>Your Nickname, Please.</label><br/>
+            <div class="wrap">
+                <input type="text" id="nickname" maxlength="15"/>
+                <button id="enter">GOGOGO</button>
+            </div>
+            <label class="error"></label>
+        </form>
+        <div class="about">
+            Created by <a href="http://kevinfitzgerald.net/">Kevin Fitzgerald</a> | <a href="http://twitter.com/kftzg">@kftzg</a> | <a href="https://plus.google.com/107715885314190461629?rel=author">Google+</a> | <a href="https://github.com/kfitzgerald/webgl-ball-game">GitHub</a> | © 2013
+        </div>
+    </div>
+</div>
 
-		<script src="js/controls/TrackballControls-r58.js"></script>
+<div id="blocker">
 
-		<script src="js/shaders/UnpackDepthRGBAShader.js"></script>
-        
-        <script src="js/libs/ImprovedNoise.js"></script>
+    <div id="instructions">
+        <span style="font-size:40px">Click to engage</span><br />
+        W, A, S, D = Move, L/R = rotate (if you're too cheap for a mouse)<br/>
+        MOUSE = Look around / aim, WHEEL = zoom in/out, ESC = get out<br/>
+        <br/>
+        Aim and click to throw your balls, but you only get 10. Hit another player to </br>
+        kill 'em, touch your own balls or let them roll off the world to get them back.
+    </div>
 
-		<script src="js/Detector.js"></script>
-		<script src="js/libs/stats.min.js"></script>
+</div>
 
-        <script src="js/plugins.js"></script>
-        <script src="js/main.js"></script>
+<div id="respawn">
+    <div>
+        <span style="font-size:40px">U R DED</span><br/>
+        Press ENTER to respawn
+    </div>
+</div>
 
-        <!-- Google Analytics: change UA-XXXXX-X to be your site's ID.
-        <script>
-            var _gaq=[['_setAccount','UA-XXXXX-X'],['_trackPageview']];
-            (function(d,t){var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
-            g.src=('https:'==location.protocol?'//ssl':'//www')+'.google-analytics.com/ga.js';
-            s.parentNode.insertBefore(g,s)}(document,'script'));
-        </script> -->
-    </body>
+<div id="hud-ammo">
+    <span class="current">10</span>
+    / <span class="max">10</span>
+</div>
+
+<div id="hud-notifications">
+    <ul>
+    </ul>
+</div>
+
+<!--<script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.0/jquery.min.js"></script>
+<script>window.jQuery || document.write('<script src="js/vendor/jquery-1.8.0.min.js"><\/script>')</script>-->
+
+<script src="js/libs/jquery-1.8.0.min.js"></script>
+<script src="js/libs/three-r59.js"></script>
+<script src="js/libs/physi.js"></script>
+<script src="js/libs/stats.min.js"></script>
+<script src="js/libs/ImprovedNoise.js"></script>
+<script src="js/controls/PointerLockControls.js"></script>
+<script src="js/Detector.js"></script>
+<script src="js/plugins.js"></script>
+<script src="js/Plane3Geometry.js"></script>
+<script src="js/keys.js"></script>
+<script>
+    document.write('<'+'script src="http://'+window.location.hostname+':8080/socket.io/socket.io.js"></'+'script>');
+</script>
+<script src="js/main-tree.js"></script>
+
+<script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+            m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-43251507-1', 'soarcetech.com');
+    ga('send', 'pageview');
+
+</script>
+
+</body>
 </html>
-

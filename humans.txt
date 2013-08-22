@@ -1,15 +1,19 @@
 # humanstxt.org/
 # The humans responsible & technology colophon
 
-# TEAM
-
-    <name> -- <role> -- <twitter>
+* Written by Kevin Fitzgerald ([@kftzg](https://twitter.com/kftzg), http://kevinfitzgerald.net)
 
 # THANKS
 
-    <name>
+* Art style inspired by Tim Reynolds ([@turnislefthome](https://twitter.com/turnislefthome), http://www.turnislefthome.com)
+* Ideas vetted by bestie Adam Vogel ([@adambvogel](https://twitter.com/adambvogel), http://adamvogel.net)
+* Play tested and approved by my lovely wife Luciana ([@leafitz](https://twitter.com/leafitz), http://lucianaelisa.net)
+* Home grown in Milwaukee, WI
 
 # TECHNOLOGY COLOPHON
 
-    HTML5, CSS3
-    jQuery, Modernizr
+* HTML5, WebGL, Web Sockets, Web Workers, Pointer Lock
+* HTML5 Boilerplate (http://html5boilerplate.com/)
+* three.js (https://github.com/mrdoob/three.js/)
+* physi.js (http://chandlerprall.github.io/Physijs/)
+* node.js (http://nodejs.org/)

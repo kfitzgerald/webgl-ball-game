@@ -52,6 +52,18 @@ Since this is purely just a prototype of a game, there's absolutely no:
 * physi.js (http://chandlerprall.github.io/Physijs/)
 * node.js (http://nodejs.org/)
 
+### Libraries and Misc
+* THREE.PointerLockControls by Ricardo "mrdoob" Cabello (https://github.com/mrdoob/three.js/blob/master/examples/js/controls/PointerLockControls.js)
+* Improved noise algorithm by Ken Perlin (http://mrl.nyu.edu/~perlin/noise/)
+* GL Detector by AlteredQualia and Ricardo "mrdoob" Cabello (https://github.com/mrdoob/three.js/blob/master/examples/js/Detector.js)
+* JavaScript Performance Monitor by Ricardo "mrdoob" Cabello (https://github.com/mrdoob/stats.js)
+* jQuery Mousewheel by Brandon Aaron (http://brandonaaron.net)
+* requestAnimationFrame polyfill by Erik Möller, Paul Irish and Tino Zijdel (http://paulirish.com/2011/requestanimationframe-for-smart-animating/)
+* Shim for High Resolution Time by Tony Gentilcore (http://gent.ilcore.com/2012/06/better-timer-for-javascript.html)
+* THREE.PlaneGeometry.js by Ricardo "mrdoob" Cabello (http://threejsdoc.appspot.com/doc/three.js/src.source/extras/geometries/PlaneGeometry.js.html)
+* Keycode enum by Adam Vogel (http://adamvogel.net)
+* Color sequence generator by Jim Bumgardner (http://krazydad.com/tutorials/makecolors.php)
+
 ## Credits
 
 * Written by Kevin Fitzgerald ([@kftzg](https://twitter.com/kftzg), http://kevinfitzgerald.net)
