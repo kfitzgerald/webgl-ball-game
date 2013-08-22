@@ -26,7 +26,7 @@ Check it out: http://games.soarcetech.com/balls/tree.html
 3. Change into the server directory, and install socket.io (http://socket.io/), e.g. `npm install socket.io`
 4. Run the server: `node server.js`
 5. Run the webgl-game as a local virtual host (e.g. apache)
-6. Load up Google Chrome and visit `tree.html`
+6. Load up Google Chrome and visit `index.html`
 
 Stop the server with CTRL+C
 
