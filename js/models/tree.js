@@ -1,30 +1,20 @@
-/**
- * WebGL Ball Game Tree Model
- *
- *
- * Noobishly modeled in Blender by:
- *
- * @author Kevin Fitzgerald / @kftzg / http://kevinfitzgerald.net
- * Git: https://github.com/kfitzgerald/webgl-ball-game
- * Last Updated: 8/22/13 9:23 AM CST
- *
- * Copyright 2013 Kevin Fitzgerald
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http: *www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 {
 
-	"metadata" :
+    "model_title": "WebGL Ball Game Tree Model",
+    "model_subtitle": "Noobishly modeled in Blender by:",
+    "model_author": "@author Kevin Fitzgerald / @kftzg / http://kevinfitzgerald.net",
+    "model_uri": "Git: https://github.com/kfitzgerald/webgl-ball-game",
+    "model_updated": "Last Updated: 8/22/13 9:23 AM CST",
+
+    "model_copyright": "Copyright 2013 Kevin Fitzgerald",
+
+    "model_license": "Licensed under the Apache License, Version 2.0 (the 'License'); you may not use this file except in compliance with the License. You may obtain a copy of the License at",
+
+    "model_license_uri": "http://www.apache.org/licenses/LICENSE-2.0",
+
+    "model_license_legalese": "Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.",
+
+    "metadata" :
 	{
 		"formatVersion" : 3.1,
 		"generatedBy"   : "Blender 2.66 Exporter",
