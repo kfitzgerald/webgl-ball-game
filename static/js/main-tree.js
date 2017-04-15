@@ -468,7 +468,7 @@ function connect(nickname) {
     //
 
     // Connect to the game server on the same host, different port
-    socket = io.connect('http://'+window.location.hostname+':8080');
+    socket = io.connect(window.__ioUrl);
 
     /**
      * Occurs when the socket establishes a connection with the game server

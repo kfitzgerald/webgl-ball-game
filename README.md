@@ -22,17 +22,18 @@ Check it out: http://games.soarcetech.com/balls/
 ## Setup
 
 1. Download or clone this repository
-2. Install node.js (http://nodejs.org/)
-3. Change into the server directory, and install socket.io (http://socket.io/), e.g. `npm install socket.io`
-4. Run the server: `node server.js`
-5. Run the webgl-game as a local virtual host (e.g. apache)
-6. Load up Google Chrome and visit `index.html`
+2. Install node.js (http://nodejs.org/) 
+3. In the project root, install dependencies, e.g. `npm install`
+4. Run the server: `node .`
+5. Load up Google Chrome and visit `localhost:3000`
+
+> You can specify a different port when running, e.g. `node . 8080`
 
 Stop the server with CTRL+C
 
 If you really want it to run and restart on crash, try this:
 
-`while true; do echo 'Hit CTRL+C TO KILL'; node server.js ; sleep 1; done`
+`while true; do echo 'Hit CTRL+C TO KILL'; node . ; sleep 1; done`
 
 ## Caveats
 
@@ -42,7 +43,7 @@ Since this is purely just a prototype of a game, there's absolutely no:
 * **Security**: clients can hack and do naughty things
  * Clients handle their own balls, so clients report their own hits. 
 * **Consistency**: physics are not synchronized on the server/clients. They could be, but this example lacks this for now. Check out Jonas Gehring's blog post on how this might be possible some day: http://www.jjoe64.com/2013/07/physijs-and-threejs-on-nodejs.html
- * Clients report the position and angle when firing balls. In theory, the ball will follow a pretty consistent path, but tends to vary a bit from client to client, probably due to lag time and a bit of randomness.
+ * Clients report the position and angle when firing balls. In theory, the ball will follow a pretty consistent path, but can vary a bit from client to client.
 
 ## Features
 

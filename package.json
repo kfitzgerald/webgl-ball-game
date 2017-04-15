@@ -1,0 +1,29 @@
+{
+  "name": "webgl-ball-game",
+  "version": "2.0.0",
+  "description": "Nifty little multiplayer game in which you run around and throw balls at each other. Implemented in three.js, physi.js (ammo.js, bullet), node.js, socket.io, the usual H5BP/jQuery etc and a bit of my own elbow grease.",
+  "main": "server/server.js",
+  "directories": {
+    "doc": "doc"
+  },
+  "dependencies": {
+    "async": "^2.3.0",
+    "hapi": "^16.1.1",
+    "inert": "^4.2.0",
+    "socket.io": "^1.7.3"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kfitzgerald/webgl-ball-game.git"
+  },
+  "author": "Kevin Fitzgerald",
+  "license": "Apache2",
+  "bugs": {
+    "url": "https://github.com/kfitzgerald/webgl-ball-game/issues"
+  },
+  "homepage": "https://github.com/kfitzgerald/webgl-ball-game#readme"
+}

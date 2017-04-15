@@ -57,7 +57,7 @@ THREE.Plane3RandGeometry = function ( width, height, widthSegments, heightSegmen
             var c = ( ix + 1 ) + gridX1 * ( iz + 1 );
             var d = ( ix + 1 ) + gridX1 * iz;
 
-            var rnd = Math.random();
+            var rnd = (iz + ix) % 2;
             if (rnd < 0.50)	 {
                 var face = new THREE.Face3( a, b, c );
                 face.normal.copy( normal );

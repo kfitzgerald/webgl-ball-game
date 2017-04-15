@@ -110,7 +110,10 @@
 <script src="js/Plane3Geometry.js"></script>
 <script src="js/keys.js"></script>
 <script>
-    document.write('<'+'script src="http://'+window.location.hostname+':8080/socket.io/socket.io.js"></'+'script>');
+    window.__ioUrl = '//'+window.location.host;
+//    window.__ioUrl = '//'+window.location.hostname+':8080';
+//    window.__ioUrl = '//192.168.99.100:8081';
+    document.write('<'+'script src="'+window.__ioUrl+'/socket.io/socket.io.js"></'+'script>');
 </script>
 <script src="js/main-tree.js"></script>
 
